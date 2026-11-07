@@ -1,0 +1,6 @@
+.superpowers/
+lab/secrets/
+lab/faults/
+*.csv
+__pycache__/
+.pytest_cache/
