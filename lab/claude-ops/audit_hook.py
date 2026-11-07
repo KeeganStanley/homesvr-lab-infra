@@ -24,6 +24,7 @@ _DESTRUCTIVE = [re.compile(p) for p in (
     r"\bwipefs\b",
     r"(?<![\w.-])dd\s",
     r"\bpvesm\s+remove\b",
+    r"\bpvesh\s+delete\b",
 )]
 
 _CHANGE = [re.compile(p) for p in (
@@ -34,6 +35,8 @@ _CHANGE = [re.compile(p) for p in (
     r"\bzfs\s+(?:set|create|snapshot|rollback)\b",
     r"\bsed\s+(?:-\S+\s+)*-\S*i",
     r"\btee\b(?:\s+-\S+)*\s+[^\s|;&-]",
+    r"\bpvesh\s+(?:create|set)\b",
+    r"(?<![\w.-])(?:rm|mv|chmod|chown|kill|pkill|killall|reboot|poweroff)(?=\s|$|[;&|])",
 )]
 
 # Redirections that don't write a file: 2>&1, >&2, >/dev/null, &>/dev/null

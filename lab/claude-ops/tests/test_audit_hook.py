@@ -145,3 +145,33 @@ def test_settings_json_bypass_mode_with_audit_hook():
     assert s["hooks"]["PreToolUse"] == [
         {"matcher": "*", "hooks": [{"type": "command", "command": "/usr/local/bin/claude-audit-hook"}]}
     ]
+
+
+@pytest.mark.parametrize("cmd", [
+    "pvesh delete /nodes/pve-lab/lxc/199",
+    "ssh root@lab pvesh delete /nodes/pve-lab/qemu/100",
+])
+def test_pvesh_delete_is_destructive(cmd):
+    assert bash(cmd) == "destructive"
+
+
+@pytest.mark.parametrize("cmd", [
+    "pvesh create /nodes/pve-lab/lxc -vmid 199",
+    "pvesh set /nodes/pve-lab/config -description x",
+    "rm /etc/foo.conf",
+    "mv /etc/a /etc/b",
+    "chmod 600 /etc/foo",
+    "chown root:root /etc/foo",
+    "kill -9 1234",
+    "pkill jellyfin",
+    "reboot",
+    "poweroff",
+])
+def test_everyday_mutations_are_change_not_read(cmd):
+    assert bash(cmd) == "change"
+
+
+def test_pvesh_get_and_lookalike_words_stay_read():
+    assert bash("pvesh get /nodes/pve-lab/status") == "read"
+    assert bash("ls /var/lib/removed-items") == "read"
+    assert bash("echo permission denied") == "read"
