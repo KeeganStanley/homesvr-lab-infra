@@ -1,0 +1,16 @@
+[Unit]
+Description=Claude Code Remote Control (HomeSVR Lab) in tmux
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+User=claude
+WorkingDirectory=/home/claude
+Type=forking
+ExecStart=/usr/bin/tmux new-session -d -s rc /home/claude/rc-loop.sh
+ExecStop=/usr/bin/tmux kill-session -t rc
+Restart=always
+RestartSec=30
+
+[Install]
+WantedBy=multi-user.target
