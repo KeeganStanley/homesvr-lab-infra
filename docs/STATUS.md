@@ -25,11 +25,12 @@ Repo layout note: to run a script on a server, fetch the repo tarball (see `lab/
 
 - **Classifier scope:** the audit hook tags more than the plan lists (`pvesh delete` destructive; `pvesh create/set`, `rm`, `mv`, `chmod`, `chown`, `kill`, `reboot`, `poweroff` change). Under-tagging is the unsafe direction for a draft prod policy. *Cost if wrong:* delete three regex lines.
 - **Extra files:** `lab/claude-ops/40-deploy.sh` (installs hook, settings, rc-loop, service; does not enable the service) and `lab/tools/f5_match.py` (F5 matching logic, tested). Not in the plan.
+- **Managed settings (owner decision, 2026-11-08):** the audit hook is registered in root-owned `/etc/claude-code/managed-settings.json` (`40-deploy.sh` installs it); the user `settings.json` only sets `bypassPermissions`. The `claude` user can no longer remove the hook by editing its own settings. *Limit:* the agent has root SSH on pve-lab, and root there can `pct exec`/`pct push` into CT 100 as root, so this stops accidents and prompt-level edits, not a deliberate bypass. The audit log is still `claude`-writable. *To verify on the box:* `/hooks` in a Claude session lists the managed hook, and `claude -p` produces one log line per call (not two).
 - **F4 output:** never prints the prod IP, and ssh uses `UserKnownHostsFile=/dev/null`, so results can be pasted into this public repo.
 
 ## Open decisions
 
-- The agent can edit its own `~/.claude/settings.json` (removing the audit hook) and write the audit log. A root-owned `/etc/claude-code/managed-settings.json` would prevent that. Plan and spec accept the weakness for the lab. Your call before T1.
+- (none open from the hook/settings review; see rulings)
 
 - Phase 0 preflight's RAM/ARC reading decides whether 8 GB for the lab is safe, or whether the Win10 VM must be off during lab sessions.
 

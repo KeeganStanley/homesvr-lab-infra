@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Runs INSIDE the claude-ops CT as root, from this directory (lab/claude-ops of the fetched repo).
-# Installs the audit hook, its log directory, Claude Code settings, and the Remote Control loop + unit.
+# Installs the audit hook, its log directory, managed + user Claude Code settings, and the Remote Control loop + unit.
 # Idempotent. It does NOT enable the service: do the interactive `claude auth login` first, then
 # `systemctl enable --now claude-rc`.
 # DEST_ROOT prefixes all destinations so the script can be exercised off-host.
@@ -14,6 +14,10 @@ install -D -m 0755 "$here/audit_hook.py" "$root/usr/local/bin/claude-audit-hook"
 
 install -d -m 0755 "$root/var/log/claude-audit"
 "$CHOWN" claude:claude "$root/var/log/claude-audit"
+
+# Managed settings: root-owned, so the `claude` user cannot remove the audit hook by editing its own settings.
+install -d -m 0755 "$root/etc/claude-code"
+install -m 0644 "$here/managed-settings.json" "$root/etc/claude-code/managed-settings.json"
 
 install -d -m 0700 "$root/home/claude/.claude"
 install -m 0644 "$here/settings.json" "$root/home/claude/.claude/settings.json"

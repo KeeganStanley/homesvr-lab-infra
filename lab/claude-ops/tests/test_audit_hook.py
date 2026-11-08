@@ -139,12 +139,37 @@ def test_main_returns_0_when_log_unwritable(tmp_path):
     assert main(payload, str(blocker / "audit.jsonl")) == 0
 
 
-def test_settings_json_bypass_mode_with_audit_hook():
+def test_user_settings_set_bypass_mode_but_carry_no_hook():
+    # The hook lives in root-owned managed settings; a second copy here would log every call twice.
     s = json.loads((Path(__file__).resolve().parents[1] / "settings.json").read_text())
     assert s["permissions"]["defaultMode"] == "bypassPermissions"
+    assert "hooks" not in s
+
+
+def test_managed_settings_carry_the_audit_hook():
+    s = json.loads((Path(__file__).resolve().parents[1] / "managed-settings.json").read_text())
     assert s["hooks"]["PreToolUse"] == [
         {"matcher": "*", "hooks": [{"type": "command", "command": "/usr/local/bin/claude-audit-hook"}]}
     ]
+
+
+def test_deploy_installs_managed_settings_root_owned(tmp_path):
+    import os
+    import subprocess
+    chown_log = tmp_path / "chown.log"
+    fake = tmp_path / "chown"
+    fake.write_text(f'#!/usr/bin/env bash\necho "$@" >> "{chown_log}"\n')
+    fake.chmod(0o755)
+    root = tmp_path / "root"
+    deploy = Path(__file__).resolve().parents[1] / "40-deploy.sh"
+    subprocess.run(["bash", str(deploy)], check=True, capture_output=True,
+                   env=dict(os.environ, DEST_ROOT=str(root), CHOWN=str(fake)))
+    managed = root / "etc/claude-code/managed-settings.json"
+    assert managed.is_file()
+    assert oct(managed.stat().st_mode & 0o777) == "0o644"
+    assert oct(managed.parent.stat().st_mode & 0o777) == "0o755"
+    assert "claude-code" not in chown_log.read_text()  # stays owned by root
+    assert "hooks" not in json.loads((root / "home/claude/.claude/settings.json").read_text())
 
 
 @pytest.mark.parametrize("cmd", [
