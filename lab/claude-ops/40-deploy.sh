@@ -12,8 +12,13 @@ CHOWN=${CHOWN:-chown}
 
 install -D -m 0755 "$here/audit_hook.py" "$root/usr/local/bin/claude-audit-hook"
 
+# Audit log: directory stays root-owned (the agent cannot delete or rename the log); the file is
+# root:claude 0620 (claude can append but not read). Root can still undo this via the hypervisor.
 install -d -m 0755 "$root/var/log/claude-audit"
-"$CHOWN" claude:claude "$root/var/log/claude-audit"
+log="$root/var/log/claude-audit/audit.jsonl"
+[ -e "$log" ] || : > "$log"
+chmod 0620 "$log"
+"$CHOWN" root:claude "$log"
 
 # Managed settings: root-owned, so the `claude` user cannot remove the audit hook by editing its own settings.
 install -d -m 0755 "$root/etc/claude-code"

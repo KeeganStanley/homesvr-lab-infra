@@ -4,14 +4,17 @@
 #   - PVE API token claude@pve!ops (Administrator on /, privsep 0), stored in the CT at
 #     /home/claude/.config/pve-lab/token (mode 0600) as `PVEAPIToken=claude@pve!ops=<secret>`
 # The token secret is never printed and never appears in a command line.
+# It also gives the agent a `Host pve-lab` ssh alias and pve-lab's host key (BatchMode ssh cannot
+# answer an unknown-host prompt). LAB_IP is auto-detected from vmbr0; set it to override.
 # Afterwards run: pct exec 100 -- bash /root/30-install.sh   (this script pushes it there).
-# PCT / PVEAM / PVEUM / AUTH_KEYS overrides exist so the script can be exercised off-host.
+# PCT / PVEAM / PVEUM / AUTH_KEYS / HOST_KEY_FILE overrides exist so the script can be exercised off-host.
 set -euo pipefail
 
 PCT=${PCT:-pct}
 PVEAM=${PVEAM:-pveam}
 PVEUM=${PVEUM:-pveum}
 AUTH_KEYS=${AUTH_KEYS:-/root/.ssh/authorized_keys}
+HOST_KEY_FILE=${HOST_KEY_FILE:-/etc/ssh/ssh_host_ed25519_key.pub}
 here=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
 INSTALL_SCRIPT=${INSTALL_SCRIPT:-$here/../claude-ops/30-install.sh}
 ctid=100
@@ -67,6 +70,16 @@ pub=$("$PCT" exec "$ctid" -- cat /home/claude/.ssh/id_ed25519.pub)
 mkdir -p "$(dirname "$AUTH_KEYS")"
 touch "$AUTH_KEYS"
 grep -qF -- "$pub" "$AUTH_KEYS" || printf '%s\n' "$pub" >> "$AUTH_KEYS"
+
+echo "== ssh config + host key for pve-lab"
+lab_ip=${LAB_IP:-$(ip -4 -o addr show vmbr0 2>/dev/null | awk '{ print $4 }' | cut -d/ -f1 | head -n 1)}
+lab_ip=${lab_ip:-$(hostname -I | awk '{ print $1 }')}
+[ -n "$lab_ip" ] || { echo "cannot determine pve-lab IP; set LAB_IP" >&2; exit 1; }
+printf 'pve-lab,%s %s\n' "$lab_ip" "$(awk '{ print $1 " " $2 }' "$HOST_KEY_FILE")" > "$tmp/known_hosts"
+printf 'Host pve-lab\n  HostName %s\n  User root\n' "$lab_ip" > "$tmp/ssh_config"
+"$PCT" push "$ctid" "$tmp/known_hosts" /home/claude/.ssh/known_hosts --perms 0600
+"$PCT" push "$ctid" "$tmp/ssh_config" /home/claude/.ssh/config --perms 0600
+"$PCT" exec "$ctid" -- chown claude:claude /home/claude/.ssh/config /home/claude/.ssh/known_hosts
 
 echo "== API token $token_user!$token_name"
 "$PVEUM" user list | grep -qF "$token_user" || "$PVEUM" user add "$token_user" --comment "claude-ops lab agent"

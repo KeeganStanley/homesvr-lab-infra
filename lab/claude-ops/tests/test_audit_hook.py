@@ -200,3 +200,110 @@ def test_pvesh_get_and_lookalike_words_stay_read():
     assert bash("pvesh get /nodes/pve-lab/status") == "read"
     assert bash("ls /var/lib/removed-items") == "read"
     assert bash("echo permission denied") == "read"
+
+
+@pytest.mark.parametrize("cmd", [
+    "lvremove -y pve/vm-105-disk-0",
+    "vgremove pve",
+    "pvesm free local-lvm:vm-105-disk-0",
+    "pct rollback 105 snap1",
+    "qm rollback 105 snap1",
+    "qm delsnapshot 105 snap1",
+    "qm disk unlink 105 --idlist scsi1",
+    "zpool create -f tank /dev/sdb",
+    "zpool replace tank sdb sdc",
+    "zfs recv -F tank/media",
+    "sgdisk --zap-all /dev/sdb",
+    "blkdiscard /dev/sdb",
+    "shred -n1 /dev/sdb",
+    "find /var/lib/x -name '*.old' -delete",
+    "git clean -fdx",
+    "docker compose down -v",
+    "docker volume rm data",
+    "curl -sk -X DELETE https://pve-lab:8006/api2/json/nodes/pve-lab/lxc/105",
+    "curl --request delete https://pve-lab:8006/x",
+    "python3 -c 'import shutil; shutil.rmtree(\"/x\")'",
+])
+def test_destructive_forms_the_first_pass_missed(cmd):
+    assert bash(cmd) == "destructive"
+
+
+@pytest.mark.parametrize("cmd", [
+    "apt-get -y install jq",
+    "apt -qq remove foo",
+    "apt-get dist-upgrade",
+    "git -C /x push --force",
+    "git -c core.x=1 commit -m m",
+    "systemctl --user stop foo",
+    "systemctl -q stop foo",
+    "sed -e 's/a/b/' -i /etc/foo",
+    "sed -i.bak 's/a/b/' /etc/foo",
+    "pct --quiet set 101 -memory 512",
+    "curl -X POST https://pve-lab:8006/x",
+    "curl --request PUT https://pve-lab:8006/x",
+    "curl -s -d 'a=b' https://pve-lab:8006/x",
+    "pveum user delete bob@pve",
+    "pveum acl modify / --users bob@pve --roles Administrator",
+    "pvesm add dir foo --path /x",
+    "vzdump 105 --storage local",
+    "truncate -s 0 /var/log/x",
+    "python3 -c 'print(1)'",
+    "perl -e 'unlink q(x)'",
+])
+def test_change_forms_the_first_pass_missed(cmd):
+    assert bash(cmd) == "change"
+
+
+@pytest.mark.parametrize("cmd", [
+    "pveum user list",
+    "pvesm status",
+    "sgdisk -p /dev/sda",
+    "find / -name foo -type f",
+    "curl -s https://example.org",
+    "curl -sk -X GET https://pve-lab:8006/x",
+    "curl -sk -H 'Authorization: x' https://pve-lab:8006/api2/json/version",
+    "git -C /x log --oneline",
+    "zpool list",
+    "docker ps",
+    "python3 --version",
+    "apt-cache policy jq",
+    "systemctl status pveproxy",
+    "sed -n '1,5p' /etc/hosts",
+    "zfs list -t snapshot",
+])
+def test_reads_stay_read_after_widening(cmd):
+    assert bash(cmd) == "read"
+
+
+def test_installed_hook_ignores_log_path_override(tmp_path):
+    # An env override (e.g. via the agent's own settings.json "env") must not redirect the audit log.
+    import os
+    import subprocess
+    redirected = tmp_path / "elsewhere.jsonl"
+    hook = Path(__file__).resolve().parents[1] / "audit_hook.py"
+    p = subprocess.run([sys.executable, str(hook)], capture_output=True, text=True,
+                       input=json.dumps({"tool_name": "Bash", "tool_input": {"command": "ls"}}),
+                       env=dict(os.environ, CLAUDE_AUDIT_LOG=str(redirected)))
+    assert p.returncode == 0
+    assert not redirected.exists()
+
+
+def test_deploy_makes_audit_log_append_only_for_claude(tmp_path):
+    import os
+    import subprocess
+    calls = tmp_path / "calls.log"
+    fake = tmp_path / "chown"
+    fake.write_text(f'#!/usr/bin/env bash\necho "$@" >> "{calls}"\n')
+    fake.chmod(0o755)
+    root = tmp_path / "root"
+    deploy = Path(__file__).resolve().parents[1] / "40-deploy.sh"
+    subprocess.run(["bash", str(deploy)], check=True, capture_output=True,
+                   env=dict(os.environ, DEST_ROOT=str(root), CHOWN=str(fake)))
+    logdir = root / "var/log/claude-audit"
+    log = logdir / "audit.jsonl"
+    assert log.is_file()
+    assert oct(log.stat().st_mode & 0o777) == "0o620"   # owner rw, group w only: no read, append/write by claude
+    assert oct(logdir.stat().st_mode & 0o777) == "0o755"
+    recorded = calls.read_text()
+    assert f"root:claude {log}" in recorded              # file: root-owned, group claude
+    assert str(logdir) not in recorded.replace(f"root:claude {log}", "")  # directory stays root-owned

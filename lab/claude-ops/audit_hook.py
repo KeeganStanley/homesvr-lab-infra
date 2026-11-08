@@ -6,37 +6,65 @@ The tier ("read" | "change" | "destructive") is advisory: it drafts a prod appro
 policy from real usage and enforces nothing. The hook ALWAYS exits 0 and never blocks.
 """
 import json
-import os
 import re
 import sys
 from datetime import datetime, timezone
 
-DEFAULT_LOG = "/var/log/claude-audit/audit.jsonl"
+# Fixed on purpose: no environment override, so the agent cannot redirect its own audit log.
+LOG_PATH = "/var/log/claude-audit/audit.jsonl"
 
-_DESTRUCTIVE = [re.compile(p) for p in (
+# Global options may sit between a binary and its subcommand (apt-get -y install, systemctl --user stop).
+_OPTS = r"(?:\s+-{1,2}[\w=.-]+)*"
+_GIT_OPTS = r"(?:\s+(?:-C|-c)\s+\S+|\s+-{1,2}[\w=.-]+)*"
+
+
+def _sub(binary, verbs, opts=_OPTS):
+    return rf"\b{binary}{opts}\s+(?:{verbs})\b"
+
+
+_DESTRUCTIVE = [re.compile(p, re.IGNORECASE) for p in (
     r"\brm\s+(?:-[A-Za-z-]+\s+)*-[A-Za-z]*[rR][A-Za-z]*(?=\s|$)",
     r"\brm\s.*--recursive\b",
-    r"\bpct\s+destroy\b",
-    r"\bqm\s+destroy\b",
-    r"\bzfs\s+destroy\b",
-    r"\bzpool\s+(?:destroy|detach|offline|labelclear)\b",
+    _sub("pct", "destroy|rollback|delsnapshot"),
+    _sub("qm", "destroy|rollback|delsnapshot"),
+    r"\bqm\s+(?:disk\s+)?unlink\b",
+    _sub("zfs", "destroy"),
+    r"\bzfs\s+(?:recv|receive)\b.*\s-\w*F",
+    _sub("zpool", "destroy|detach|offline|labelclear|create|replace|add"),
     r"\bmkfs(?:\.\w+)?\b",
     r"\bwipefs\b",
+    r"\b(?:blkdiscard|shred|lvremove|vgremove|pvremove)\b",
+    r"\bsgdisk\s.*(?:--zap|-Z\b|-o\b)",
     r"(?<![\w.-])dd\s",
-    r"\bpvesm\s+remove\b",
-    r"\bpvesh\s+delete\b",
+    _sub("pvesm", "remove|free"),
+    _sub("pvesh", "delete"),
+    r"\bfind\b.*\s-delete\b",
+    _sub("git", "clean", _GIT_OPTS),
+    r"\bdocker(?:\s+compose)?\s+down\b.*\s-\w*v",
+    r"\bdocker\s+(?:volume|system)\s+(?:rm|prune)\b",
+    r"\bcurl\b.*(?:-X|--request)[\s=]*DELETE\b",
+    r"\brmtree\b",
 )]
 
-_CHANGE = [re.compile(p) for p in (
-    r"\b(?:pct|qm)\s+(?:set|start|stop|shutdown|reboot|create|restore|resize)\b",
-    r"\bsystemctl\s+(?:start|stop|restart|enable|disable)\b",
-    r"\bapt(?:-get)?\s+(?:install|remove|purge|upgrade|full-upgrade)\b",
-    r"\bgit\s+(?:push|commit|merge|reset)\b",
-    r"\bzfs\s+(?:set|create|snapshot|rollback)\b",
-    r"\bsed\s+(?:-\S+\s+)*-\S*i",
+_CHANGE = [re.compile(p, re.IGNORECASE) for p in (
+    _sub("pct", "set|start|stop|shutdown|reboot|create|restore|resize"),
+    _sub("qm", "set|start|stop|shutdown|reboot|create|restore|resize"),
+    _sub("systemctl", "start|stop|restart|enable|disable"),
+    _sub("apt", "install|remove|purge|upgrade|full-upgrade|dist-upgrade|autoremove"),
+    _sub("apt-get", "install|remove|purge|upgrade|full-upgrade|dist-upgrade|autoremove"),
+    _sub("git", "push|commit|merge|reset", _GIT_OPTS),
+    _sub("zfs", "set|create|snapshot|rollback|recv|receive"),
+    r"\bsed\b[^|;&]*\s-[A-Za-z]*i[A-Za-z0-9.]*(?=\s|$)",
     r"\btee\b(?:\s+-\S+)*\s+[^\s|;&-]",
-    r"\bpvesh\s+(?:create|set)\b",
+    _sub("pvesh", "create|set"),
+    _sub("pvesm", "add|set|alloc"),
+    r"\bpveum\b.*\s(?:add|modify|delete|remove|passwd)\b",
+    r"\bvzdump\b",
+    r"\btruncate\b",
     r"(?<![\w.-])(?:rm|mv|chmod|chown|kill|pkill|killall|reboot|poweroff)(?=\s|$|[;&|])",
+    r"\bcurl\b.*(?:-X|--request)[\s=]*(?:POST|PUT|PATCH)\b",
+    r"\bcurl\b.*\s(?:-d|--data\S*|-F|--form|-T|--upload-file)(?=[\s=]|$)",
+    r"\b(?:python3?|perl|ruby|node)\s+-[ce]\b",
 )]
 
 # Redirections that don't write a file: 2>&1, >&2, >/dev/null, &>/dev/null
@@ -93,7 +121,7 @@ def main(stdin_text, log_path):
 
 if __name__ == "__main__":
     try:
-        code = main(sys.stdin.read(), os.environ.get("CLAUDE_AUDIT_LOG", DEFAULT_LOG))
+        code = main(sys.stdin.read(), LOG_PATH)
     except Exception:  # noqa: BLE001
         code = 0
     sys.exit(code)
