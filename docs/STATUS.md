@@ -1,14 +1,14 @@
 # Status
 
-**Updated:** 2026-11-07
-**Phase:** Phase 0 + Foundation: all code written and unit-tested (143 pytest pass, shellcheck clean, fresh-context review done and its Important findings fixed). Nothing has run on a server yet.
+**Updated:** 2026-11-08
+**Phase:** Phase 0 + Foundation: all code written and unit-tested (143 pytest pass, shellcheck clean, fresh-context review done and its Important findings fixed). Preflight has run on prod (PASS, see `lab/results/foundation.md`). Nothing else has run on a server yet.
 **Next (owner):** run the server-side steps below in order. Stop after F8 for go/no-go; T1-T6 each need separate approval.
 
 ## Progress
 
 | Plan task | Code | Owner-run steps | Notes |
 |---|---|---|---|
-| 1 Scaffold + preflight | done | `00-preflight.sh` on prod; paste into `results/foundation.md`; stop on FAIL | |
+| 1 Scaffold + preflight | done; **preflight run 2026-11-08: PASS** | none left | |
 | 2 Baseline + compare | done | `baseline.sh 10 before.csv` on prod (lab not yet created) | |
 | 3 VM 900 + pve-lab (F1) | done | upload ISO; `01-create-vm900.sh`; install PVE; `10-post-install.sh`; `qm set 900 --delete ide2`; delete ISO; `baseline.sh 10 during.csv` + `compare_baseline.py` | the one prod change |
 | 4 claude-ops CT + creds | done | `20-create-claude-ops.sh` on pve-lab, then `pct exec 100 -- bash /root/30-install.sh`; verify per plan step 3. The script also gives the agent a `Host pve-lab` ssh alias and pve-lab's host key (BatchMode ssh failed without them) | |
@@ -44,7 +44,7 @@ Repo layout note: to run a script on a server, fetch the repo tarball (see `lab/
 - `30-install.sh` omits `uv` (spec lists it; plan's package list doesn't).
 - Reviewer could not verify on real hardware: `pvesh`/`pveum`/`pveam` output formats, `pct push` ownership in an unprivileged CT, task-log entries per `pct`/`qm` command, `Type=forking` tmux under the CT's systemd, procps 4 `vmstat` columns.
 
-- Phase 0 preflight's RAM/ARC reading decides whether 8 GB for the lab is safe, or whether the Win10 VM must be off during lab sessions.
+- **RAM (resolved on one reading, 2026-11-08):** preflight shows 18.2 GiB available (no WARN), ARC 3.1 GiB. On that reading 8 GB for the lab is safe with the Win10 VM left on. It is a single snapshot: re-check free RAM and swap during F1, and keep the runtime rule (stop lab guests below 4 GiB free or growing swap). Owner may overrule.
 
 ## Owner decisions on record
 
