@@ -43,7 +43,7 @@ Reading: nested virtualisation is on; 18.2 GiB is available (above the 12 GiB wa
 ## F2 notes
 
 - `claude remote-control` asked a one-time `Enable Remote Control? (y/n)` on first start under systemd/tmux; answered `y` in the pane (`tmux send-keys`). After `systemctl restart claude-rc` it came back with no prompt and the same environment URL (the answer persists, so `rc-loop` is not blocked).
-- The environment appears in the Claude app as `claude-ops` (claude.ai: `lab · claude-ops`, apparently working folder and hostname; derivation not documented). `--name "HomeSVR Lab"` did not show on a session started from the phone: that session was titled from the prompt. Per the Remote Control docs, `--name` sets the session title, and `--create-session-in-dir` (on by default) pre-creates one session at server start, which is probably the one that carries the name. Not yet confirmed. The session list should be checked for a pre-created "HomeSVR Lab" session.
+- The environment appears in the Claude app as `claude-ops` (claude.ai: `lab · claude-ops`, apparently working folder and hostname; derivation not documented). `--name "HomeSVR Lab"` is passed (checked with `ps` in CT 100: one `claude remote-control --name HomeSVR Lab --spawn worktree --permission-mode bypassPermissions` process, `rc-loop.sh` identical to the repo copy), but the name does not appear in the claude.ai session list or the app; a session started from the phone is titled from its prompt. Cause unknown; treated as cosmetic. claude.ai/code shows the environment as `lab` (working folder `/home/claude/lab`) on device `claude-ops` (hostname). `rc-loop.log` does not exist until the first restart (it only logs after an exit).
 - F2b (> 18 h re-confirm) not yet done.
 
 ## Usage (F7)
