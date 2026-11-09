@@ -17,10 +17,10 @@ def setup(tmp_path):
     fake(tmp_path / "pct", '''echo "pct $*" >> "$LOG"
 case "$1" in
   status) [ -f "$STATE" ];;
-  create) touch "$STATE";;
+  create) echo "umask=$(umask)" >> "$LOG"; touch "$STATE";;
   exec) shift 2; [ "$1" = -- ] && shift
         if [ "$1" = cat ]; then echo "ssh-ed25519 AAAAFAKEKEY claude-ops"; fi;;
-  push) cp "$3" "$PUSHDIR/$(echo "$4" | tr / _)";;
+  push) echo "pushmode=$(stat -c %a "$3") $4" >> "$LOG"; cp "$3" "$PUSHDIR/$(echo "$4" | tr / _)";;
   *) true;;
 esac
 ''')
@@ -45,7 +45,8 @@ fi
 
 
 def run(env):
-    return subprocess.run(["bash", str(SCRIPT)], env=env, capture_output=True, text=True, timeout=60)
+    return subprocess.run(["bash", str(SCRIPT)], env=env, capture_output=True, text=True, timeout=60,
+                          preexec_fn=lambda: os.umask(0o022))
 
 
 def test_creates_ct_with_plan_settings(tmp_path):
@@ -87,3 +88,21 @@ def test_refuses_when_ct_exists(tmp_path):
     p = run(env)
     assert p.returncode == 1
     assert "already exists" in p.stderr
+
+
+def test_pct_create_runs_with_a_normal_umask(tmp_path):
+    # An unprivileged CT's rootfs dir is created under the caller's umask. With umask 077 it is 0700
+    # root-only and the container's mapped root cannot open it: "tar: .../rootfs: Cannot open: Permission denied".
+    env = setup(tmp_path)
+    assert run(env).returncode == 0
+    umask = int(next(line for line in (tmp_path / "log").read_text().splitlines()
+                     if line.startswith("umask=")).split("=")[1], 8)
+    assert umask & 0o055 == 0, f"group/other r-x masked out: umask {umask:04o}"
+
+
+def test_secret_files_are_still_private(tmp_path):
+    env = setup(tmp_path)
+    assert run(env).returncode == 0
+    log = (tmp_path / "log").read_text()
+    assert "pushmode=600 /home/claude/.config/pve-lab/token" in log
+    assert oct((tmp_path / "authorized_keys").stat().st_mode & 0o777) == "0o600"
