@@ -31,6 +31,13 @@ Repo layout note: to run a script on a server, fetch the repo tarball (see `lab/
 - **F1 accepted by owner (2026-11-09):** `compare_baseline.py` returned `pass: false` on swap (+1536 KiB). Swap was flat inside each run; the growth arose in the 31 h between runs. The `before.csv` baseline was invalid (a slow drive in a prod pool inflated iowait; since removed), and the owner's own IO-delay monitoring shows the lab's iowait is about 0. No paired rerun was done. *Cost if wrong:* F1 was never measured on a clean before/after pair; a rerun needs the lab off for the `before` half.
 - **PVE version:** the lab runs PVE 8.4 (ISO `proxmox-ve_8.4-1`) to match prod, which also runs 8.4. Debian 13 container template is available (`debian-13-standard_13.6-1`); whether PVE 8.4 can start it is untested until Task 4.
 
+## Incident, 2026-11-09 (owner-led investigation)
+
+- The prod host hung and was rebooted. Afterwards the iGPU enumerated as `card1` instead of `card0` (the firmware framebuffer driver `simpledrm` took DRM minor 0 at 0.5 s; `i915` loaded about 21 s into boot and got minor 1), so CTs with a `/dev/dri/card0` device line failed to start. Kernel unchanged across the reboot. The crash cause is not established; the on-disk journal for that boot appears missing (the host runs `log2ram`).
+- Nothing in this repo touches the GPU, kernel, modules, boot config or other guests' configs (checked by grep). Prod-side writes by these scripts are `qm create 900` and the baseline CSV only.
+- Disclosure: `apt install tmux` was run on prod at 16:23 the same day, probably prompted by my "run it in tmux" tip. That is outside the allowed prod-change list. Runbooks must not assume extra packages on prod.
+- **Hold:** VM 900 stays stopped and Tasks 5 and 6 (deploy, Remote Control login) are paused until the owner says the host is stable.
+
 ## Open decisions
 
 - (none open from the hook/settings review; see rulings)
