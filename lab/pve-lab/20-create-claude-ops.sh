@@ -34,7 +34,9 @@ fi
 
 tmp=$(mktemp -d)
 trap 'rm -rf "$tmp"' EXIT
-umask 077
+# No global umask: `pct create` of an unprivileged CT builds its rootfs dir under the caller's umask, and
+# 077 makes it root-only so the container's mapped root cannot open it ("tar: .../rootfs: Permission denied").
+# Secrets stay private because $tmp is a 0700 dir and the token file is created 0600 below.
 
 echo "== template"
 "$PVEAM" update
@@ -69,6 +71,7 @@ echo "== user, ssh key"
 pub=$("$PCT" exec "$ctid" -- cat /home/claude/.ssh/id_ed25519.pub)
 mkdir -p "$(dirname "$AUTH_KEYS")"
 touch "$AUTH_KEYS"
+chmod 0600 "$AUTH_KEYS"
 grep -qF -- "$pub" "$AUTH_KEYS" || printf '%s\n' "$pub" >> "$AUTH_KEYS"
 
 echo "== ssh config + host key for pve-lab"
@@ -84,6 +87,7 @@ printf 'Host pve-lab\n  HostName %s\n  User root\n' "$lab_ip" > "$tmp/ssh_config
 echo "== API token $token_user!$token_name"
 "$PVEUM" user list | grep -qF "$token_user" || "$PVEUM" user add "$token_user" --comment "claude-ops lab agent"
 "$PVEUM" acl modify / --users "$token_user" --roles Administrator
+install -m 0600 /dev/null "$tmp/token"
 "$PVEUM" user token add "$token_user" "$token_name" --privsep 0 --output-format json |
   python3 -c '
 import json, sys
