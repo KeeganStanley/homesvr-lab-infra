@@ -24,7 +24,7 @@ Reading: nested virtualisation is on; 18.2 GiB is available (above the 12 GiB wa
 | F1 Nested check, VM 900, baseline delta < 5% | 2026-11-09 | **Accepted by owner**; strict rule not met | `compare_baseline.py before.csv during.csv`: `cpu_busy_delta_pp` 0.2, `iowait_delta_pp` -6.2, `swap_growth_kib` 1536, `pass` false | See F1 notes below |
 | F2 Phone on mobile data runs `pveversion` | 2026-11-09 | PASS | Phone screenshot (status bar: 5G, no Wi-Fi): prompt "Run pveversion on pve-lab over ssh" returned `pve-manager/8.4.21`, kernel `6.8.12-43-pve`. Screenshot not stored in the repo | See F2 notes below |
 | F2b Re-confirm after > 18 h | | | | |
-| F3 Reboot + 15 min network cut recover < 5 min | | | | |
+| F3 Reboot + 15 min network cut recover < 5 min | 2026-11-09 | PASS | Owner report: after `pct reboot 100` the session answered from the phone almost immediately; after a 15 min `link_down` on CT 100 the existing sessions answered almost immediately once the link was restored | See F3 notes below |
 | F4 Credential boundary | | | | |
 | F5 Audit: 20 mixed commands logged | | | | |
 | F6 Push notifications | 2026-11-09 | PASS | Owner report: test A ("run sleep 120 then echo done, notify me when finished", app backgrounded) and test B ("use the AskUserQuestion tool to ask me to pick between blue and green") both delivered pushes | See F6 notes below |
@@ -45,6 +45,12 @@ Reading: nested virtualisation is on; 18.2 GiB is available (above the 12 GiB wa
 - `claude remote-control` asked a one-time `Enable Remote Control? (y/n)` on first start under systemd/tmux; answered `y` in the pane (`tmux send-keys`). After `systemctl restart claude-rc` it came back with no prompt and the same environment URL (the answer persists, so `rc-loop` is not blocked).
 - The environment appears in the Claude app as `claude-ops` (claude.ai: `lab · claude-ops`, apparently working folder and hostname; derivation not documented). `--name "HomeSVR Lab"` is passed (checked with `ps` in CT 100: one `claude remote-control --name HomeSVR Lab --spawn worktree --permission-mode bypassPermissions` process, `rc-loop.sh` identical to the repo copy), but the name does not appear in the claude.ai session list or the app; a session started from the phone is titled from its prompt. Cause unknown; treated as cosmetic. claude.ai/code shows the environment as `lab` (working folder `/home/claude/lab`) on device `claude-ops` (hostname). `rc-loop.log` does not exist until the first restart (it only logs after an exit).
 - F2b (> 18 h re-confirm) not yet done.
+
+## F3 notes
+
+- During the outage new sessions never started and existing ones stopped answering; the phone app kept showing stale "connected" statuses, even after an app restart. A "connected" badge therefore does not prove the lab is reachable; a reply to a prompt does.
+- `/home/claude/rc-loop.log` does not exist after either test. The log is only written after `claude remote-control` exits, so the process never exited during the 15 min outage (the docs describe a give-up after roughly 10 minutes offline; not seen here), and the reboot kills the whole tmux session rather than letting the loop log an exit. The `rc-loop.sh` restart-after-exit path has been unit-tested with a fake `claude` but has not been exercised on the real server. The plan expected a log entry; it did not occur.
+- The network cut used `pct set 100 --net0 ...,hwaddr=<existing MAC>,link_down=1` (MAC preserved; the plan's command without `hwaddr` would have generated a new one).
 
 ## F6 notes
 
