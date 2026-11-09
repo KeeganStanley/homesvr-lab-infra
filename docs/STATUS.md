@@ -2,7 +2,7 @@
 
 **Updated:** 2026-11-08
 **Phase:** Phase 0 + Foundation: all code written and unit-tested (143 pytest pass, shellcheck clean, fresh-context review done and its Important findings fixed). Preflight has run on prod (PASS, see `lab/results/foundation.md`). Nothing else has run on a server yet.
-**Next (owner):** Task 4: on `pve-lab`, run `20-create-claude-ops.sh`, then `30-install.sh` in the CT. Then continue with the server-side steps below in order. Stop after F8 for go/no-go; T1-T6 each need separate approval.
+**Next (owner):** Task 5 deploy (push `lab/claude-ops` into CT 100, run `40-deploy.sh`), then Task 6 steps in this order: Require trusted devices, `claude auth login`, trust + bypass prompts in `/home/claude/lab`, `/config` push settings. The Task 5 live check (`claude -p`) needs that login first, so it comes after those, not before. Stop after F8 for go/no-go; T1-T6 each need separate approval.
 
 ## Progress
 
@@ -11,7 +11,7 @@
 | 1 Scaffold + preflight | done; **preflight run 2026-11-08: PASS** | none left | |
 | 2 Baseline + compare | done | `baseline.sh 10 before.csv` on prod (lab not yet created) | |
 | 3 VM 900 + pve-lab (F1) | done; **VM 900 + PVE 8.4 installed, F1 accepted by owner 2026-11-09** (see ruling) | upload ISO; `01-create-vm900.sh`; install PVE; `10-post-install.sh`; `qm set 900 --delete ide2`; delete ISO; `baseline.sh 10 during.csv` + `compare_baseline.py` | the one prod change |
-| 4 claude-ops CT + creds | done | `20-create-claude-ops.sh` on pve-lab, then `pct exec 100 -- bash /root/30-install.sh`; verify per plan step 3. The script also gives the agent a `Host pve-lab` ssh alias and pve-lab's host key (BatchMode ssh failed without them) | |
+| 4 claude-ops CT + creds | done; **run on pve-lab 2026-11-09, all three verification checks passed** (CT 100 created from the Debian 13 template on PVE 8.4; ssh, API token and `claude --version` all work). An early run failed on a `umask 077` bug in `20-`, fixed | `20-create-claude-ops.sh` on pve-lab, then `pct exec 100 -- bash /root/30-install.sh`; verify per plan step 3. The script also gives the agent a `Host pve-lab` ssh alias and pve-lab's host key (BatchMode ssh failed without them) | |
 | 5 Audit hook + settings | done | `pct exec 100 -- bash <repo>/lab/claude-ops/40-deploy.sh`; one `claude -p` run; `tail -1` the log **as root** (the log is `root:claude 0620`: the agent can append, not read) | |
 | 6 Remote Control (F2, F3, F6) | done | **swap plan steps 2 and 3:** turn on Require trusted devices first, then `claude auth login` (or re-run it after), then trust prompts, push settings, `systemctl enable --now claude-rc`, then F2/F2b/F3/F6 from the phone | |
 | 7 F4, F5, F7, F8 + go/no-go | done | F4 (`lab/tests/f4-cred-boundary.sh <prod_ip>` in CT, then `history -c` and delete), F5 (`f5-audit-check.sh <ts> 20` on pve-lab), F7, F8 | then stop for owner review |
