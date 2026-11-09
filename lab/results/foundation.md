@@ -27,7 +27,7 @@ Reading: nested virtualisation is on; 18.2 GiB is available (above the 12 GiB wa
 | F3 Reboot + 15 min network cut recover < 5 min | | | | |
 | F4 Credential boundary | | | | |
 | F5 Audit: 20 mixed commands logged | | | | |
-| F6 Push notifications | | | | |
+| F6 Push notifications | 2026-11-09 | PASS | Owner report: test A ("run sleep 120 then echo done, notify me when finished", app backgrounded) and test B ("use the AskUserQuestion tool to ask me to pick between blue and green") both delivered pushes | See F6 notes below |
 | F7 Usage per task | | | | see table below |
 | F8 Kill switch < 2 min | | | | |
 
@@ -45,6 +45,12 @@ Reading: nested virtualisation is on; 18.2 GiB is available (above the 12 GiB wa
 - `claude remote-control` asked a one-time `Enable Remote Control? (y/n)` on first start under systemd/tmux; answered `y` in the pane (`tmux send-keys`). After `systemctl restart claude-rc` it came back with no prompt and the same environment URL (the answer persists, so `rc-loop` is not blocked).
 - The environment appears in the Claude app as `claude-ops` (claude.ai: `lab · claude-ops`, apparently working folder and hostname; derivation not documented). `--name "HomeSVR Lab"` is passed (checked with `ps` in CT 100: one `claude remote-control --name HomeSVR Lab --spawn worktree --permission-mode bypassPermissions` process, `rc-loop.sh` identical to the repo copy), but the name does not appear in the claude.ai session list or the app; a session started from the phone is titled from its prompt. Cause unknown; treated as cosmetic. claude.ai/code shows the environment as `lab` (working folder `/home/claude/lab`) on device `claude-ops` (hostname). `rc-loop.log` does not exist until the first restart (it only logs after an exit).
 - F2b (> 18 h re-confirm) not yet done.
+
+## F6 notes
+
+- First attempt (plain "ask me which of two options" prompt, sent while the 120 s sleep was still running) was a bad test: the agent had no options to offer and asked for them. Replaced by tests A and B above, run one at a time in separate sessions.
+- Pushes initially did not arrive while sessions ran on Haiku; they arrived after switching to Sonnet, and kept arriving after switching back to Haiku. The model was therefore not the blocker. The likely cause is push registration (docs: if `/config` shows "No mobile registered", open the Claude app so it refreshes its push token; the warning clears when Remote Control next connects), but several things changed between the failure and the success, so the cause is not isolated. If pushes fail again, check that first, then Android notification and battery settings.
+- Both push toggles ("Push when actions required", "Push when Claude decides") are on in the CT's `/config`.
 
 ## Usage (F7)
 
