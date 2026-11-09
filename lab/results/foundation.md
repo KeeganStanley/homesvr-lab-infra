@@ -21,7 +21,7 @@ Reading: nested virtualisation is on; 18.2 GiB is available (above the 12 GiB wa
 
 | Test | Date | Result | Evidence | Notes |
 |---|---|---|---|---|
-| F1 Nested check, VM 900, baseline delta < 5% | | | | |
+| F1 Nested check, VM 900, baseline delta < 5% | 2026-11-09 | **Accepted by owner**; strict rule not met | `compare_baseline.py before.csv during.csv`: `cpu_busy_delta_pp` 0.2, `iowait_delta_pp` -6.2, `swap_growth_kib` 1536, `pass` false | See F1 notes below |
 | F2 Phone on mobile data runs `pveversion` | | | | |
 | F2b Re-confirm after > 18 h | | | | |
 | F3 Reboot + 15 min network cut recover < 5 min | | | | |
@@ -30,6 +30,15 @@ Reading: nested virtualisation is on; 18.2 GiB is available (above the 12 GiB wa
 | F6 Push notifications | | | | |
 | F7 Usage per task | | | | see table below |
 | F8 Kill switch < 2 min | | | | |
+
+## F1 notes
+
+- Setup: VM 900 created to spec (`qm config` verified: `cpu host`, 4 cores, 8192 MB, `balloon 0`, `cpuunits 50`, `mbps_rd/wr 100`, `onboot 0`, 128G on `local-lvm`). PVE 8.4 installed, matching prod. `10-post-install.sh` run, kernel upgraded, rebooted. `pveam available` lists `debian-13-standard_13.6-1_amd64.tar.zst`. ISO detached and deleted from `local`. The lab's address and credentials are recorded outside this repo.
+- `before.csv` (2026-11-08) is **not a valid baseline**: it shows 6-7% iowait at near-zero CPU, caused by a slow drive in a production pool that has since been removed. The -6.2 pp iowait delta therefore compares the lab against a degraded host and means nothing.
+- Owner's own IO-delay monitoring shows the iowait figure during the lab (about 0%) is accurate.
+- Swap: flat inside each run (40448 KiB before, 41984 KiB during); the 1536 KiB difference arose in the 31 h between the runs, which include VM 900's creation and install. `free -m` agrees (41 MiB swap used, 8 GiB swap, 15.6 GiB available with the lab running).
+- Ruling (owner, 2026-11-09): accept F1 on this evidence, although the plan's strict "swap growth <= 0" and a valid before/after pair were not satisfied. No paired rerun was taken.
+- `vmstat` on the prod host reports an identical `free` value on every row. That is `vmstat` itself, not `baseline.sh`; use `free -m` or `/proc/meminfo` for memory checks.
 
 ## Usage (F7)
 
