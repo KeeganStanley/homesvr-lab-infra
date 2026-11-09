@@ -1,16 +1,16 @@
 # Status
 
-**Updated:** 2026-11-07
-**Phase:** Phase 0 + Foundation: all code written and unit-tested (143 pytest pass, shellcheck clean, fresh-context review done and its Important findings fixed). Nothing has run on a server yet.
-**Next (owner):** run the server-side steps below in order. Stop after F8 for go/no-go; T1-T6 each need separate approval.
+**Updated:** 2026-11-08
+**Phase:** Phase 0 + Foundation: all code written and unit-tested (143 pytest pass, shellcheck clean, fresh-context review done and its Important findings fixed). Preflight has run on prod (PASS, see `lab/results/foundation.md`). Nothing else has run on a server yet.
+**Next (owner):** Task 4: on `pve-lab`, run `20-create-claude-ops.sh`, then `30-install.sh` in the CT. Then continue with the server-side steps below in order. Stop after F8 for go/no-go; T1-T6 each need separate approval.
 
 ## Progress
 
 | Plan task | Code | Owner-run steps | Notes |
 |---|---|---|---|
-| 1 Scaffold + preflight | done | `00-preflight.sh` on prod; paste into `results/foundation.md`; stop on FAIL | |
+| 1 Scaffold + preflight | done; **preflight run 2026-11-08: PASS** | none left | |
 | 2 Baseline + compare | done | `baseline.sh 10 before.csv` on prod (lab not yet created) | |
-| 3 VM 900 + pve-lab (F1) | done | upload ISO; `01-create-vm900.sh`; install PVE; `10-post-install.sh`; `qm set 900 --delete ide2`; delete ISO; `baseline.sh 10 during.csv` + `compare_baseline.py` | the one prod change |
+| 3 VM 900 + pve-lab (F1) | done; **VM 900 + PVE 8.4 installed, F1 accepted by owner 2026-11-09** (see ruling) | upload ISO; `01-create-vm900.sh`; install PVE; `10-post-install.sh`; `qm set 900 --delete ide2`; delete ISO; `baseline.sh 10 during.csv` + `compare_baseline.py` | the one prod change |
 | 4 claude-ops CT + creds | done | `20-create-claude-ops.sh` on pve-lab, then `pct exec 100 -- bash /root/30-install.sh`; verify per plan step 3. The script also gives the agent a `Host pve-lab` ssh alias and pve-lab's host key (BatchMode ssh failed without them) | |
 | 5 Audit hook + settings | done | `pct exec 100 -- bash <repo>/lab/claude-ops/40-deploy.sh`; one `claude -p` run; `tail -1` the log **as root** (the log is `root:claude 0620`: the agent can append, not read) | |
 | 6 Remote Control (F2, F3, F6) | done | **swap plan steps 2 and 3:** turn on Require trusted devices first, then `claude auth login` (or re-run it after), then trust prompts, push settings, `systemctl enable --now claude-rc`, then F2/F2b/F3/F6 from the phone | |
@@ -28,11 +28,16 @@ Repo layout note: to run a script on a server, fetch the repo tarball (see `lab/
 - **Managed settings (owner decision, 2026-11-08):** the audit hook is registered in root-owned `/etc/claude-code/managed-settings.json` (`40-deploy.sh` installs it); the user `settings.json` only sets `bypassPermissions` (the hook is kept out of it so there is one source of truth). Docs confirm (code.claude.com managed-settings and hooks pages, per the reviewer): the Linux path is `/etc/claude-code/managed-settings.json`, hook entries merge across scopes, and user settings cannot disable managed hooks. Tamper hardening: the installed hook has a fixed log path (no env override), the log directory is root-owned, and the log is `root:claude 0620` (append, no read; `claude` can still truncate it). *Limit:* the agent has root SSH on pve-lab, and root there can `pct exec`/`pct push` into CT 100 as root, so this stops accidents and prompt-level edits, not a deliberate bypass. *Not confirmed from docs:* that PreToolUse hooks fire in `bypassPermissions` mode (expected). *To verify on the box:* `/hooks` lists the managed hook, and `claude -p` writes one log line per call.
 - **F4 output:** never prints the prod IP, and ssh uses `UserKnownHostsFile=/dev/null`, so results can be pasted into this public repo.
 
+- **F1 accepted by owner (2026-11-09):** `compare_baseline.py` returned `pass: false` on swap (+1536 KiB). Swap was flat inside each run; the growth arose in the 31 h between runs. The `before.csv` baseline was invalid (a slow drive in a prod pool inflated iowait; since removed), and the owner's own IO-delay monitoring shows the lab's iowait is about 0. No paired rerun was done. *Cost if wrong:* F1 was never measured on a clean before/after pair; a rerun needs the lab off for the `before` half.
+- **PVE version:** the lab runs PVE 8.4 (ISO `proxmox-ve_8.4-1`) to match prod, which also runs 8.4. Debian 13 container template is available (`debian-13-standard_13.6-1`); whether PVE 8.4 can start it is untested until Task 4.
+
 ## Open decisions
 
 - (none open from the hook/settings review; see rulings)
 
 ## Known minor issues (reviewer, deferred)
+
+- `vmstat` on the prod host shows a constant `free` column (not a `baseline.sh` bug; unused by the pass rule). Use `free -m` for memory checks.
 
 - `baseline.sh`: `ts` is local time with a `Z` suffix (wrong if prod isn't on UTC).
 - `20-create-claude-ops.sh`: if no `debian-13-standard` template exists the script exits silently (`pipefail` + `grep`); `pveam list | grep -q` can SIGPIPE.
@@ -44,7 +49,7 @@ Repo layout note: to run a script on a server, fetch the repo tarball (see `lab/
 - `30-install.sh` omits `uv` (spec lists it; plan's package list doesn't).
 - Reviewer could not verify on real hardware: `pvesh`/`pveum`/`pveam` output formats, `pct push` ownership in an unprivileged CT, task-log entries per `pct`/`qm` command, `Type=forking` tmux under the CT's systemd, procps 4 `vmstat` columns.
 
-- Phase 0 preflight's RAM/ARC reading decides whether 8 GB for the lab is safe, or whether the Win10 VM must be off during lab sessions.
+- **RAM (resolved on one reading, 2026-11-08):** preflight shows 18.2 GiB available (no WARN), ARC 3.1 GiB. On that reading 8 GB for the lab is safe with the Win10 VM left on. It is a single snapshot: re-check free RAM and swap during F1, and keep the runtime rule (stop lab guests below 4 GiB free or growing swap). Owner may overrule.
 
 ## Owner decisions on record
 
