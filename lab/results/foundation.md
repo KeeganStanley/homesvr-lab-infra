@@ -28,7 +28,7 @@ Reading: nested virtualisation is on; 18.2 GiB is available (above the 12 GiB wa
 | F4 Credential boundary | 2026-11-10 | PASS | `f4-cred-boundary.sh <prod_ip>` run in CT 100 as `claude`: PASS (a), (b), (c), (d) | See F4 notes below |
 | F5 Audit: 20 mixed commands logged | 2026-11-10 | PASS | `f5-audit-check.sh <ts> 20` on pve-lab: `AUDIT_LINES=20`, `PVE_TASKS=8`, `RESULT=PASS`; the `pct destroy 199` record has `prod_tier: destructive` | See F5 notes below |
 | F6 Push notifications | 2026-11-09 | PASS | Owner report: test A ("run sleep 120 then echo done, notify me when finished", app backgrounded) and test B ("use the AskUserQuestion tool to ask me to pick between blue and green") both delivered pushes | See F6 notes below |
-| F7 Usage per task | | | | see table below |
+| F7 Usage per task | 2026-11-10 | **Partial** | Baseline only: 6% session / 11% week on Pro | No before-figure for F2-F6. Pro vs Max can't be decided from this; it needs per-session numbers from T1 onward (T1 and T6 expected to be heaviest) |
 | F8 Kill switch < 2 min | | | | |
 
 ## F1 notes
@@ -75,4 +75,5 @@ Reading: nested virtualisation is on; 18.2 GiB is available (above the 12 GiB wa
 
 | Task | Usage before % | Usage after % | Notes |
 |---|---|---|---|
-| F2–F6 | | | |
+| F2–F6 | not captured | 6% session / 11% week (2026-11-10 22:52, Pro) | Before-figure was never taken. The after figure includes the build session, chats and Cowork: weekly split Claude Code 60% / Cowork 29% / Chats 11% (shares of the 11%). The lab's own share cannot be separated. |
+| *Baseline for next task* | 6% session / 11% week | | Take session % and week % before and after every task session; avoid other Claude Code work in between. |
