@@ -25,7 +25,7 @@ Reading: nested virtualisation is on; 18.2 GiB is available (above the 12 GiB wa
 | F2 Phone on mobile data runs `pveversion` | 2026-11-09 | PASS | Phone screenshot (status bar: 5G, no Wi-Fi): prompt "Run pveversion on pve-lab over ssh" returned `pve-manager/8.4.21`, kernel `6.8.12-43-pve`. Screenshot not stored in the repo | See F2 notes below |
 | F2b Re-confirm after > 18 h | 2026-11-10 | PASS | Owner report: steering from the phone worked after the 18 h trusted-device re-confirm | |
 | F3 Reboot + 15 min network cut recover < 5 min | 2026-11-09 | PASS | Owner report: after `pct reboot 100` the session answered from the phone almost immediately; after a 15 min `link_down` on CT 100 the existing sessions answered almost immediately once the link was restored | See F3 notes below |
-| F4 Credential boundary | | | | |
+| F4 Credential boundary | 2026-11-10 | PASS | `f4-cred-boundary.sh <prod_ip>` run in CT 100 as `claude`: PASS (a), (b), (c), (d) | See F4 notes below |
 | F5 Audit: 20 mixed commands logged | | | | |
 | F6 Push notifications | 2026-11-09 | PASS | Owner report: test A ("run sleep 120 then echo done, notify me when finished", app backgrounded) and test B ("use the AskUserQuestion tool to ask me to pick between blue and green") both delivered pushes | See F6 notes below |
 | F7 Usage per task | | | | see table below |
@@ -45,6 +45,12 @@ Reading: nested virtualisation is on; 18.2 GiB is available (above the 12 GiB wa
 - `claude remote-control` asked a one-time `Enable Remote Control? (y/n)` on first start under systemd/tmux; answered `y` in the pane (`tmux send-keys`). After `systemctl restart claude-rc` it came back with no prompt and the same environment URL (the answer persists, so `rc-loop` is not blocked).
 - The environment appears in the Claude app as `claude-ops` (claude.ai: `lab · claude-ops`, apparently working folder and hostname; derivation not documented). `--name "HomeSVR Lab"` is passed (checked with `ps` in CT 100: one `claude remote-control --name HomeSVR Lab --spawn worktree --permission-mode bypassPermissions` process, `rc-loop.sh` identical to the repo copy), but the name does not appear in the claude.ai session list or the app; a session started from the phone is titled from its prompt. Cause unknown; treated as cosmetic. claude.ai/code shows the environment as `lab` (working folder `/home/claude/lab`) on device `claude-ops` (hostname). `rc-loop.log` does not exist until the first restart (it only logs after an exit).
 - F2b (> 18 h re-confirm) not yet done.
+
+## F4 notes
+
+- Positive control (accidental): the script was first run with the *lab's* address instead of prod's. It reported FAIL (a) ssh succeeded, FAIL (b) HTTP 200 instead of 401, FAIL (c) address found in 4 files (`~/.ssh/known_hosts`, `~/.ssh/known_hosts.old`, `~/.ssh/config`, and a Claude Code session transcript under `~/.claude/projects/`), PASS (d). So each check does detect access, and the run against prod is meaningful.
+- Run against prod: all four PASS. The HTTP 401 in (b) shows the address was right and reachable, so the PASS in (a) is a real authentication refusal and not a typo or timeout.
+- Claude Code keeps session transcripts under `~/.claude/projects/` containing every command and prompt; the prod address must therefore never be typed into a lab session. Check (c) scans `/home/claude`, so it would catch that.
 
 ## F3 notes
 
