@@ -23,7 +23,7 @@ Reading: nested virtualisation is on; 18.2 GiB is available (above the 12 GiB wa
 |---|---|---|---|---|
 | F1 Nested check, VM 900, baseline delta < 5% | 2026-11-09 | **Accepted by owner**; strict rule not met | `compare_baseline.py before.csv during.csv`: `cpu_busy_delta_pp` 0.2, `iowait_delta_pp` -6.2, `swap_growth_kib` 1536, `pass` false | See F1 notes below |
 | F2 Phone on mobile data runs `pveversion` | 2026-11-09 | PASS | Phone screenshot (status bar: 5G, no Wi-Fi): prompt "Run pveversion on pve-lab over ssh" returned `pve-manager/8.4.21`, kernel `6.8.12-43-pve`. Screenshot not stored in the repo | See F2 notes below |
-| F2b Re-confirm after > 18 h | | | | |
+| F2b Re-confirm after > 18 h | 2026-11-10 | PASS | Owner report: steering from the phone worked after the 18 h trusted-device re-confirm | |
 | F3 Reboot + 15 min network cut recover < 5 min | 2026-11-09 | PASS | Owner report: after `pct reboot 100` the session answered from the phone almost immediately; after a 15 min `link_down` on CT 100 the existing sessions answered almost immediately once the link was restored | See F3 notes below |
 | F4 Credential boundary | | | | |
 | F5 Audit: 20 mixed commands logged | | | | |
