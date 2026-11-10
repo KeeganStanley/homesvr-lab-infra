@@ -26,7 +26,7 @@ Reading: nested virtualisation is on; 18.2 GiB is available (above the 12 GiB wa
 | F2b Re-confirm after > 18 h | 2026-11-10 | PASS | Owner report: steering from the phone worked after the 18 h trusted-device re-confirm | |
 | F3 Reboot + 15 min network cut recover < 5 min | 2026-11-09 | PASS | Owner report: after `pct reboot 100` the session answered from the phone almost immediately; after a 15 min `link_down` on CT 100 the existing sessions answered almost immediately once the link was restored | See F3 notes below |
 | F4 Credential boundary | 2026-11-10 | PASS | `f4-cred-boundary.sh <prod_ip>` run in CT 100 as `claude`: PASS (a), (b), (c), (d) | See F4 notes below |
-| F5 Audit: 20 mixed commands logged | | | | |
+| F5 Audit: 20 mixed commands logged | 2026-11-10 | PASS | `f5-audit-check.sh <ts> 20` on pve-lab: `AUDIT_LINES=20`, `PVE_TASKS=8`, `RESULT=PASS`; the `pct destroy 199` record has `prod_tier: destructive` | See F5 notes below |
 | F6 Push notifications | 2026-11-09 | PASS | Owner report: test A ("run sleep 120 then echo done, notify me when finished", app backgrounded) and test B ("use the AskUserQuestion tool to ask me to pick between blue and green") both delivered pushes | See F6 notes below |
 | F7 Usage per task | | | | see table below |
 | F8 Kill switch < 2 min | | | | |
@@ -45,6 +45,12 @@ Reading: nested virtualisation is on; 18.2 GiB is available (above the 12 GiB wa
 - `claude remote-control` asked a one-time `Enable Remote Control? (y/n)` on first start under systemd/tmux; answered `y` in the pane (`tmux send-keys`). After `systemctl restart claude-rc` it came back with no prompt and the same environment URL (the answer persists, so `rc-loop` is not blocked).
 - The environment appears in the Claude app as `claude-ops` (claude.ai: `lab · claude-ops`, apparently working folder and hostname; derivation not documented). `--name "HomeSVR Lab"` is passed (checked with `ps` in CT 100: one `claude remote-control --name HomeSVR Lab --spawn worktree --permission-mode bypassPermissions` process, `rc-loop.sh` identical to the repo copy), but the name does not appear in the claude.ai session list or the app; a session started from the phone is titled from its prompt. Cause unknown; treated as cosmetic. claude.ai/code shows the environment as `lab` (working folder `/home/claude/lab`) on device `claude-ops` (hostname). `rc-loop.log` does not exist until the first restart (it only logs after an exit).
 - F2b (> 18 h re-confirm) not yet done.
+
+## F5 notes
+
+- The 20 calls came from a fixed prompt (8 reads, 10 changes, 2 destructive, one command per Bash call). Two reads (`pveversion`, `pvesm status`) exited 127: the agent ran them in the CT instead of over `ssh pve-lab` (the prompt only said to ssh the pct/qm/zfs ones). The hook logs before the command runs, so they still count, and they make no PVE task so they don't affect matching. The agent reported the failure instead of hiding it.
+- PVE task log agrees with the audit log: create + 3 starts + 3 stops + destroy = 8 tasks, all matched. `AUDIT_LINES` was exactly the 20 minimum, with no slack.
+- Only the `pct destroy` tier was spot-checked so far.
 
 ## F4 notes
 
