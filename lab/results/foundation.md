@@ -29,7 +29,7 @@ Reading: nested virtualisation is on; 18.2 GiB is available (above the 12 GiB wa
 | F5 Audit: 20 mixed commands logged | 2026-11-10 | PASS | `f5-audit-check.sh <ts> 20` on pve-lab: `AUDIT_LINES=20`, `PVE_TASKS=8`, `RESULT=PASS`; the `pct destroy 199` record has `prod_tier: destructive` | See F5 notes below |
 | F6 Push notifications | 2026-11-09 | PASS | Owner report: test A ("run sleep 120 then echo done, notify me when finished", app backgrounded) and test B ("use the AskUserQuestion tool to ask me to pick between blue and green") both delivered pushes | See F6 notes below |
 | F7 Usage per task | 2026-11-10 | **Partial** | Baseline only: 6% session / 11% week on Pro | No before-figure for F2-F6. Pro vs Max can't be decided from this; it needs per-session numbers from T1 onward (T1 and T6 expected to be heaviest) |
-| F8 Kill switch < 2 min | 2026-11-11 | PASS (re-enrol not yet confirmed) | Owner report: VM 900 stopped from the prod web UI on the phone in about 27 s (limit 2 min); lab sessions stopped answering while it was down (about 2 min); removing the phone from trusted devices blocked access to lab sessions | See F8 notes below |
+| F8 Kill switch < 2 min | 2026-11-11 | PASS | Owner report: VM 900 stopped from the prod web UI on the phone in about 27 s (limit 2 min); lab sessions stopped answering while it was down (about 2 min); removing the phone from trusted devices blocked access to lab sessions, and re-enrolling it restored steering | See F8 notes below |
 
 ## F1 notes
 
@@ -50,7 +50,7 @@ Reading: nested virtualisation is on; 18.2 GiB is available (above the 12 GiB wa
 
 - First attempt (2026-11-10) stopped CT 100 from inside the lab, not VM 900, so it was not F8. It showed the CT boot chain is fast (`claude-rc` active one second after the CT booted, no `rc-loop.log`) but the owner saw roughly 5 minutes (a rough estimate) before the session answered. That delay did not reproduce when VM 900 itself was stopped, and its cause is unknown.
 - Real F8 (VM 900, owner on the phone, prod web UI): stop took just over 27 s. While down, lab sessions did not respond. Down about 2 min. Start took just over 11 s and the lab session answered as soon as the owner navigated to it (about 15 s). Boot timestamps afterwards: VM `uptime -s` 00:42:12, CT 00:42:21, `claude-rc` ActiveEnterTimestamp 00:42:22 (UTC), i.e. the whole stack was up about 10 s after the VM's kernel booted.
-- Trusted devices: after removing the phone, lab sessions in the history showed a login prompt with their contents hidden, and starting a new session showed the same prompt, so steering is blocked. Re-enrolment of the phone not yet confirmed.
+- Trusted devices: after removing the phone, lab sessions in the history showed a login prompt with their contents hidden, and starting a new session showed the same prompt, so steering is blocked. After re-enrolling the phone, lab sessions responded again.
 
 ## F5 notes
 
