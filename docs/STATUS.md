@@ -32,6 +32,9 @@ Repo layout note: to run a script on a server, fetch the repo tarball (see `lab/
 - **Subscription popup (owner request, 2026-11-09):** `lab/pve-lab/15-remove-nag.sh` (optional, lab only) patches `proxmoxlib.js` via `lab/tools/patch_nag.py` and installs an apt hook that re-applies it after upgrades. It refuses to run unless the host is named `pve-lab`. The dialog pattern comes from the community patch and was *not* verified against a real PVE 8.4 file (git.proxmox.com is not reachable from this session); it fails closed (exit 1, nothing changed) if the pattern isn't found. Revert: remove `/etc/apt/apt.conf.d/99-pve-nag-patch`, then `apt-get install --reinstall proxmox-widget-toolkit`.
 - **PVE version:** the lab runs PVE 8.4 (ISO `proxmox-ve_8.4-1`) to match prod, which also runs 8.4. Debian 13 container template is available (`debian-13-standard_13.6-1`); whether PVE 8.4 can start it is untested until Task 4.
 
+- **Swap tolerance (owner decision, 2026-11-17):** `compare_baseline.py` passes swap growth up to 4096 KiB instead of requiring <= 0 (override with `--swap-tolerance-kib N`). Two clean runs showed harmless +1536 KiB and +256 KiB; real memory pressure is tens of MiB or more. The plan's "<= 0" is superseded. *Cost if wrong:* edit `DEFAULT_SWAP_TOLERANCE_KIB`.
+- **Prod and tooling (owner, 2026-11-17):** prod stability is good enough to proceed with the tests; `tmux` is installed on prod and safe to use in runbooks; the owner can push files into the lab if needed. Push reliability and F7 usage are monitored by the owner through T1-T6.
+
 ## Incident, 2026-11-09 (closed for this repo)
 
 - The prod host hung and was rebooted. Afterwards some CTs failed to start and the media drive's filesystem needed `xfs_repair`. Both were host-side problems, fixed by the owner outside this repo.

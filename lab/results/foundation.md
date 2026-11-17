@@ -122,4 +122,12 @@ Recommendation: **go to the owner's review of T1-T6**, with these open items for
 6. Prod stability is the owner's call: the host hung on 2026-11-09 (see STATUS incident note; nothing found implicates VM 900 or these scripts). VM 900 is `onboot=0`.
 7. Runbooks must not assume extra packages on prod (the incident note); the "run it in tmux" tips given during F1 and the loaded run did.
 
+Owner decisions on these items (2026-11-17):
+1. Swap rule replaced by a tolerance: `compare_baseline.py` now passes swap growth up to 4096 KiB (flag `--swap-tolerance-kib N`; the JSON reports the tolerance). Both earlier accepted runs (+1536 KiB, +256 KiB) pass under it. *Cost if wrong:* edit one constant.
+2. Push reliability: the owner will keep monitoring it through T1-T6.
+3. F7: same, per-session usage is recorded from T1 onward.
+4. and 5.: explained to the owner; see STATUS open decisions.
+6. Prod stability: the owner judged it good enough to proceed with the tests.
+7. `tmux` is now installed on prod (by the owner) and is safe to use in runbooks; the owner can also push files into the lab if needed.
+
 Review gate: stop here. Each of T1-T6 needs the owner's separate review and approval before its session runs.

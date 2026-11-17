@@ -4,6 +4,8 @@ import subprocess
 import sys
 from pathlib import Path
 
+import pytest
+
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from compare_baseline import compare_baseline  # noqa: E402
@@ -39,10 +41,33 @@ def test_iowait_4pp_passes():
     assert r["pass"] is True
 
 
-def test_swap_growth_fails():
-    r = compare_baseline(rows(swpd=0), rows(swpd=1024))
-    assert r["swap_growth_kib"] == 1024
+def test_swap_growth_beyond_tolerance_fails():
+    r = compare_baseline(rows(swpd=0), rows(swpd=8192))
+    assert r["swap_growth_kib"] == 8192
     assert r["pass"] is False
+
+
+@pytest.mark.parametrize("growth", [256, 1536, 4096])
+def test_small_swap_growth_within_default_tolerance_passes(growth):
+    # Observed on the real host: +1536 KiB and +256 KiB with no real memory pressure.
+    r = compare_baseline(rows(swpd=0), rows(swpd=growth))
+    assert r["swap_growth_kib"] == growth
+    assert r["pass"] is True
+
+
+def test_swap_growth_one_kib_over_tolerance_fails():
+    assert compare_baseline(rows(swpd=0), rows(swpd=4097))["pass"] is False
+
+
+def test_tolerance_is_reported_and_overridable():
+    assert compare_baseline(rows(), rows())["swap_tolerance_kib"] == 4096
+    strict = compare_baseline(rows(swpd=0), rows(swpd=1024), swap_tolerance_kib=0)
+    assert strict["swap_tolerance_kib"] == 0
+    assert strict["pass"] is False
+
+
+def test_swap_shrinking_passes():
+    assert compare_baseline(rows(swpd=2048), rows(swpd=0))["pass"] is True
 
 
 def write_csv(path, data):
@@ -67,6 +92,16 @@ def test_cli_pass_exits_0_and_prints_json(tmp_path):
 
 
 def test_cli_fail_exits_1(tmp_path):
-    p = run_cli(tmp_path, rows(), rows(swpd=2048))
+    p = run_cli(tmp_path, rows(), rows(swpd=8192))
     assert p.returncode == 1
     assert json.loads(p.stdout)["pass"] is False
+
+
+def test_cli_swap_tolerance_flag(tmp_path):
+    p = run_cli(tmp_path, rows(), rows(swpd=2048))
+    assert p.returncode == 0                         # within the default 4096 KiB
+    b, a = tmp_path / "b.csv", tmp_path / "a.csv"
+    strict = subprocess.run([sys.executable, str(TOOL), "--swap-tolerance-kib", "0", str(b), str(a)],
+                            capture_output=True, text=True)
+    assert strict.returncode == 1
+    assert json.loads(strict.stdout)["swap_tolerance_kib"] == 0
