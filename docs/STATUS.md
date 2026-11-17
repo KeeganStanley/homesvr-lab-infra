@@ -42,6 +42,8 @@ Repo layout note: to run a script on a server, fetch the repo tarball (see `lab/
 - `tmux` was installed on prod by the owner at the time. Runbooks must not assume extra packages on prod.
 - Tasks 5 and 6 are no longer on hold. VM 900 is stopped (`onboot=0`): run `qm start 900` on prod before continuing Task 5.
 
+- **T4 draft (2026-11-17):** `docs/superpowers/plans/2026-11-17-t4-tailscale-review.md` is awaiting the owner's review (decisions D1-D5). No T4 session runs until approved. Two facts in it are unverified because `tailscale.com` was not reachable from the drafting session: key expiry on tagged devices, and the unprivileged-CT `/dev/net/tun` setup.
+
 ## Open decisions
 
 - (none open from the hook/settings review; see rulings)
