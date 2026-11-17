@@ -42,7 +42,7 @@ Repo layout note: to run a script on a server, fetch the repo tarball (see `lab/
 - `tmux` was installed on prod by the owner at the time. Runbooks must not assume extra packages on prod.
 - Tasks 5 and 6 are no longer on hold. VM 900 is stopped (`onboot=0`): run `qm start 900` on prod before continuing Task 5.
 
-- **T4 draft (2026-11-17):** `docs/superpowers/plans/2026-11-17-t4-tailscale-review.md` is awaiting the owner's review (decisions D1-D5). No T4 session runs until approved. Two facts in it are unverified because `tailscale.com` was not reachable from the drafting session: key expiry on tagged devices, and the unprivileged-CT `/dev/net/tun` setup.
+- **T4 draft (2026-11-17):** `docs/superpowers/plans/2026-11-17-t4-tailscale-review.md`. Owner decided D1-D5 on 2026-11-17: Tailscale on the host, tag the phone, interactive login, PC untagged as the denied device, Sonnet (medium) with Haiku subagents allowed. Key expiry on tagged devices is now verified from the Tailscale docs: off by default, can be re-enabled per device in the admin console, so tags stay. The CT `/dev/net/tun` point is moot (D1-a). Owner setup done: account with MFA, phone app installed (pending device approval), device approval on, ACL reviewed. No T4 session runs until the owner approves the session itself.
 
 ## Open decisions
 

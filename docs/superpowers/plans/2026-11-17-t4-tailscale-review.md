@@ -1,6 +1,6 @@
 # T4 (Tailscale) — setup and prompt, for owner review
 
-**Status:** DRAFT. Not approved. No session runs until the owner approves this (CLAUDE.md review gate).
+**Status:** DRAFT, decisions D1-D5 made by the owner 2026-11-17 (see §1). Session not yet approved to run (CLAUDE.md review gate).
 **Spec:** `docs/superpowers/specs/2026-11-07-agent-ops-lab-design.md` §3 T4. **Why first:** it gives remote lab access and a second kill switch for later tasks.
 **Nothing here touches production.** Tailscale goes on `pve-lab` only.
 
@@ -13,6 +13,14 @@
 | D3 | How the node authenticates | (a) interactive login URL approved on the phone; (b) auth key | (a). No secret passes through the agent. If (b): single-use, 1 h expiry, revoked straight after. A key pasted into a session is stored in the CT's transcript under `~/.claude/projects/`. |
 | D4 | Negative-test device | owner's PC (untagged) or a second account | follows D2 |
 | D5 | Model | Haiku / Sonnet (medium) | your call; record usage % before and after (F7) |
+
+**Owner decisions (2026-11-17):**
+
+- **D1: (a)** Tailscale on the `pve-lab` host.
+- **D2: (a)** tag the phone. Verified 2026-11-17 against tailscale.com/kb/1068/tags and /kb/1028/key-expiry: tagging (and re-authenticating a tagged node) disables key expiry by default, but it can be switched back on per device (admin console → Machines → device menu → Enable key expiry, or the API). So option (b) is unnecessary. **Order matters:** apply the tag first, then enable expiry; a later re-auth turns it off again, so re-check after any re-auth.
+- **D3: (a)** interactive login URL.
+- **D4:** owner's PC, joined **untagged**.
+- **D5:** Sonnet (medium). The agent may spawn Haiku subagents if it judges them worthwhile.
 
 ## 2. Your setup (agent cannot do these)
 
@@ -28,7 +36,7 @@
 - No subnet route covering the LAN. At most `/32` routes to lab IPs. **No exit node.** No `--advertise-routes` for a range.
 - No Tailscale SSH, no changes to anything outside `pve-lab` (the agent holds no prod credentials anyway).
 - ACL limits the phone to the lab host's :8006 and :22 only.
-- Node-key expiry left on (see D2).
+- Node-key expiry left on (see D2): after tagging `pve-lab` and the phone, the owner re-enables expiry on both in the Machines page and checks it shows an expiry date.
 - Login URLs and any auth keys are handed to you to approve on the phone.
 
 Draft ACL (option D2-a, tags; adjust for D2-b). Placeholders only, no addresses:
