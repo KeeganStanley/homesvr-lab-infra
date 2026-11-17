@@ -22,14 +22,14 @@ Reading: nested virtualisation is on; 18.2 GiB is available (above the 12 GiB wa
 | Test | Date | Result | Evidence | Notes |
 |---|---|---|---|---|
 | F1 Nested check, VM 900, baseline delta < 5% | 2026-11-09 | **Accepted by owner**; strict rule not met | `compare_baseline.py before.csv during.csv`: `cpu_busy_delta_pp` 0.2, `iowait_delta_pp` -6.2, `swap_growth_kib` 1536, `pass` false | See F1 notes below |
-| F2 Phone on mobile data runs `pveversion` | | | | |
-| F2b Re-confirm after > 18 h | | | | |
-| F3 Reboot + 15 min network cut recover < 5 min | | | | |
-| F4 Credential boundary | | | | |
-| F5 Audit: 20 mixed commands logged | | | | |
-| F6 Push notifications | | | | |
-| F7 Usage per task | | | | see table below |
-| F8 Kill switch < 2 min | | | | |
+| F2 Phone on mobile data runs `pveversion` | 2026-11-09 | PASS | Phone screenshot (status bar: 5G, no Wi-Fi): prompt "Run pveversion on pve-lab over ssh" returned `pve-manager/8.4.21`, kernel `6.8.12-43-pve`. Screenshot not stored in the repo | See F2 notes below |
+| F2b Re-confirm after > 18 h | 2026-11-10 | PASS | Owner report: steering from the phone worked after the 18 h trusted-device re-confirm | |
+| F3 Reboot + 15 min network cut recover < 5 min | 2026-11-09 | PASS | Owner report: after `pct reboot 100` the session answered from the phone almost immediately; after a 15 min `link_down` on CT 100 the existing sessions answered almost immediately once the link was restored | See F3 notes below |
+| F4 Credential boundary | 2026-11-10 | PASS | `f4-cred-boundary.sh <prod_ip>` run in CT 100 as `claude`: PASS (a), (b), (c), (d) | See F4 notes below |
+| F5 Audit: 20 mixed commands logged | 2026-11-10 | PASS | `f5-audit-check.sh <ts> 20` on pve-lab: `AUDIT_LINES=20`, `PVE_TASKS=8`, `RESULT=PASS`; the `pct destroy 199` record has `prod_tier: destructive` | See F5 notes below |
+| F6 Push notifications | 2026-11-09 | PASS | Owner report: test A ("run sleep 120 then echo done, notify me when finished", app backgrounded) and test B ("use the AskUserQuestion tool to ask me to pick between blue and green") both delivered pushes | See F6 notes below |
+| F7 Usage per task | 2026-11-10 | **Partial** | Baseline only: 6% session / 11% week on Pro | No before-figure for F2-F6. Pro vs Max can't be decided from this; it needs per-session numbers from T1 onward (T1 and T6 expected to be heaviest) |
+| F8 Kill switch < 2 min | 2026-11-11 | PASS | Owner report: VM 900 stopped from the prod web UI on the phone in about 27 s (limit 2 min); lab sessions stopped answering while it was down (about 2 min); removing the phone from trusted devices blocked access to lab sessions, and re-enrolling it restored steering | See F8 notes below |
 
 ## F1 notes
 
@@ -38,10 +38,96 @@ Reading: nested virtualisation is on; 18.2 GiB is available (above the 12 GiB wa
 - Owner's own IO-delay monitoring shows the iowait figure during the lab (about 0%) is accurate.
 - Swap: flat inside each run (40448 KiB before, 41984 KiB during); the 1536 KiB difference arose in the 31 h between the runs, which include VM 900's creation and install. `free -m` agrees (41 MiB swap used, 8 GiB swap, 15.6 GiB available with the lab running).
 - Ruling (owner, 2026-11-09): accept F1 on this evidence, although the plan's strict "swap growth <= 0" and a valid before/after pair were not satisfied. No paired rerun was taken.
+- A clean paired run later gave the real answer for a loaded lab (see "Loaded-lab baseline" below): CPU +2.6 pp, iowait +0.2 pp, swap +256 KiB.
 - `vmstat` on the prod host reports an identical `free` value on every row. That is `vmstat` itself, not `baseline.sh`; use `free -m` or `/proc/meminfo` for memory checks.
+
+## F2 notes
+
+- `claude remote-control` asked a one-time `Enable Remote Control? (y/n)` on first start under systemd/tmux; answered `y` in the pane (`tmux send-keys`). After `systemctl restart claude-rc` it came back with no prompt and the same environment URL (the answer persists, so `rc-loop` is not blocked).
+- The environment appears in the Claude app as `claude-ops` (claude.ai: `lab · claude-ops`, apparently working folder and hostname; derivation not documented). `--name "HomeSVR Lab"` is passed (checked with `ps` in CT 100: one `claude remote-control --name HomeSVR Lab --spawn worktree --permission-mode bypassPermissions` process, `rc-loop.sh` identical to the repo copy), but the name does not appear in the claude.ai session list or the app; a session started from the phone is titled from its prompt. Cause unknown; treated as cosmetic. claude.ai/code shows the environment as `lab` (working folder `/home/claude/lab`) on device `claude-ops` (hostname). `rc-loop.log` does not exist until the first restart (it only logs after an exit).
+- F2b (> 18 h re-confirm) not yet done.
+
+## F8 notes
+
+- First attempt (2026-11-10) stopped CT 100 from inside the lab, not VM 900, so it was not F8. It showed the CT boot chain is fast (`claude-rc` active one second after the CT booted, no `rc-loop.log`) but the owner saw roughly 5 minutes (a rough estimate) before the session answered. That delay did not reproduce when VM 900 itself was stopped, and its cause is unknown.
+- Real F8 (VM 900, owner on the phone, prod web UI): stop took just over 27 s. While down, lab sessions did not respond. Down about 2 min. Start took just over 11 s and the lab session answered as soon as the owner navigated to it (about 15 s). Boot timestamps afterwards: VM `uptime -s` 00:42:12, CT 00:42:21, `claude-rc` ActiveEnterTimestamp 00:42:22 (UTC), i.e. the whole stack was up about 10 s after the VM's kernel booted.
+- Trusted devices: after removing the phone, lab sessions in the history showed a login prompt with their contents hidden, and starting a new session showed the same prompt, so steering is blocked. After re-enrolling the phone, lab sessions responded again.
+
+## F5 notes
+
+- The 20 calls came from a fixed prompt (8 reads, 10 changes, 2 destructive, one command per Bash call). Two reads (`pveversion`, `pvesm status`) exited 127: the agent ran them in the CT instead of over `ssh pve-lab` (the prompt only said to ssh the pct/qm/zfs ones). The hook logs before the command runs, so they still count, and they make no PVE task so they don't affect matching. The agent reported the failure instead of hiding it.
+- PVE task log agrees with the audit log: create + 3 starts + 3 stops + destroy = 8 tasks, all matched. `AUDIT_LINES` was exactly the 20 minimum, with no slack.
+- Only the `pct destroy` tier was spot-checked so far.
+
+## F4 notes
+
+- Positive control (accidental): the script was first run with the *lab's* address instead of prod's. It reported FAIL (a) ssh succeeded, FAIL (b) HTTP 200 instead of 401, FAIL (c) address found in 4 files (`~/.ssh/known_hosts`, `~/.ssh/known_hosts.old`, `~/.ssh/config`, and a Claude Code session transcript under `~/.claude/projects/`), PASS (d). So each check does detect access, and the run against prod is meaningful.
+- Run against prod: all four PASS. The HTTP 401 in (b) shows the address was right and reachable, so the PASS in (a) is a real authentication refusal and not a typo or timeout.
+- Claude Code keeps session transcripts under `~/.claude/projects/` containing every command and prompt; the prod address must therefore never be typed into a lab session. Check (c) scans `/home/claude`, so it would catch that.
+
+## F3 notes
+
+- During the outage new sessions never started and existing ones stopped answering; the phone app kept showing stale "connected" statuses, even after an app restart. A "connected" badge therefore does not prove the lab is reachable; a reply to a prompt does.
+- `/home/claude/rc-loop.log` does not exist after either test. The log is only written after `claude remote-control` exits, so the process never exited during the 15 min outage (the docs describe a give-up after roughly 10 minutes offline; not seen here), and the reboot kills the whole tmux session rather than letting the loop log an exit. The `rc-loop.sh` restart-after-exit path has been unit-tested with a fake `claude` but has not been exercised on the real server. The plan expected a log entry; it did not occur.
+- The network cut used `pct set 100 --net0 ...,hwaddr=<existing MAC>,link_down=1` (MAC preserved; the plan's command without `hwaddr` would have generated a new one).
+
+## F6 notes
+
+- First attempt (plain "ask me which of two options" prompt, sent while the 120 s sleep was still running) was a bad test: the agent had no options to offer and asked for them. Replaced by tests A and B above, run one at a time in separate sessions.
+- Pushes initially did not arrive on Haiku sessions, with the app in the foreground and in the background. After switching to Sonnet they arrived, and they kept arriving after switching back to Haiku; a later Haiku test (question, phone unlocked, another app in front) also delivered. `/config` never showed "No mobile registered" at any point, so push registration is ruled out. Battery optimisation (set to unrestricted) and a `claude-rc` restart were done before the failures stopped and did not fix it alone. Cause not isolated. Open hypotheses: (1) push is discretionary for "Push when Claude decides", and for test B the agent must use its question tool, so a smaller model may sometimes skip it; (2) the docs say pushes are skipped while the user is "focused on the connected terminal", which the app showing the session in the foreground might count as. Neither confirmed.
+- Reliability not yet measured: F6 is recorded as a pass on the results above. A suggested follow-up is three runs each of tests A and B on Haiku with the phone unlocked and another app in front.
+- Both push toggles ("Push when actions required", "Push when Claude decides") are on in the CT's `/config`.
 
 ## Usage (F7)
 
 | Task | Usage before % | Usage after % | Notes |
 |---|---|---|---|
-| F2–F6 | | | |
+| F2–F6 | not captured | 6% session / 11% week (2026-11-10 22:52, Pro) | Before-figure was never taken. The after figure includes the build session, chats and Cowork: weekly split Claude Code 60% / Cowork 29% / Chats 11% (shares of the 11%). The lab's own share cannot be separated. |
+| Loaded-lab prompt (2 CTs, stress-ng, Sonnet 5.5 medium) | not stated | 2% week / 1% session (reported 2026-11-17; weekly allowance had reset since the earlier reading) | Cheap, but the figure includes whatever else ran in the same window. |
+| *Baseline for next task* | 6% session / 11% week | | Take session % and week % before and after every task session; avoid other Claude Code work in between. |
+
+## Loaded-lab baseline (Task 7, step 6)
+
+Clean pair: `before3.csv` with VM 900 stopped, `during3.csv` with the lab running and the agent loading it from the phone (two CTs created, `apt-get update`, `stress-ng --cpu 2 --io 2` for 5 min in each, then destroyed).
+
+`compare_baseline.py before3.csv during3.csv` -> `{"cpu_busy_delta_pp": 2.6, "iowait_delta_pp": 0.2, "swap_growth_kib": 256, "pass": false}`.
+
+- CPU and iowait are inside the 5 pp limits. The only failure is the plan's strict "swap growth <= 0" rule, by 256 KiB.
+- Owner observations: RAM use barely grew, Jellyfin playback never stuttered, IO delay stayed near 0.
+- Ruling (owner): accept as a pass despite the 256 KiB swap growth. *Cost if wrong:* none known; the strict rule has now failed by a few hundred KiB on two separate runs, which suggests it is too tight for this host.
+- The agent hit a network failure inside the new CTs at the apt step: my prompt created them without a NIC (`--net0` omitted). It diagnosed the cause and proposed adding a NIC to each; that worked for the rest of the run. Lab CTs created by the agent need `net0` given explicitly.
+
+## Go / no-go summary
+
+| Test | Result | Caveat |
+|---|---|---|
+| F1 idle lab vs baseline | Accepted by owner | strict swap rule not met; first `before.csv` invalid (slow prod drive); superseded by the loaded run |
+| Loaded lab vs clean baseline | Accepted by owner | CPU +2.6 pp, iowait +0.2 pp, swap +256 KiB (strict rule not met) |
+| F2 phone, mobile data | PASS | |
+| F2b > 18 h re-confirm | PASS | |
+| F3 reboot + 15 min cut | PASS | `rc-loop` restart-after-exit path not exercised on the real server |
+| F4 credential boundary | PASS | accidental positive control showed the checks do detect access |
+| F5 audit | PASS | exactly 20 lines, no slack; only the `pct destroy` tier spot-checked |
+| F6 push | PASS | first attempts failed on Haiku, cause not isolated; reliability not measured |
+| F7 usage | Partial | baseline only; Pro vs Max not decidable yet |
+| F8 kill switch | PASS | 27 s stop; lab back about 10 s after the VM's kernel booted |
+
+Recommendation: **go to the owner's review of T1-T6**, with these open items for the owner:
+
+1. The strict swap criterion keeps failing by tiny amounts. Decide whether to replace it with a tolerance or a within-run measure before the task tests rely on it.
+2. F6 pushes work but are not shown to be reliable; for "Push when Claude decides" the agent chooses whether to send one.
+3. F7 cannot yet settle Pro vs Max: record session % and week % before and after every task session. T1 and T6 are expected to be the heavy ones.
+4. The managed-settings hook is not tamper-proof: the agent has root on pve-lab and can reach CT 100 as root. The audit log is protected only in the sense that `claude` cannot delete or read it; it can still truncate it.
+5. The audit classifier is regex-based and advisory (see STATUS known issues).
+6. Prod stability is the owner's call: the host hung on 2026-11-09 (see STATUS incident note; nothing found implicates VM 900 or these scripts). VM 900 is `onboot=0`.
+7. Runbooks must not assume extra packages on prod (the incident note); the "run it in tmux" tips given during F1 and the loaded run did.
+
+Owner decisions on these items (2026-11-17):
+1. Swap rule replaced by a tolerance: `compare_baseline.py` now passes swap growth up to 4096 KiB (flag `--swap-tolerance-kib N`; the JSON reports the tolerance). Both earlier accepted runs (+1536 KiB, +256 KiB) pass under it. *Cost if wrong:* edit one constant.
+2. Push reliability: the owner will keep monitoring it through T1-T6.
+3. F7: same, per-session usage is recorded from T1 onward.
+4. and 5.: explained to the owner; see STATUS open decisions.
+6. Prod stability: the owner judged it good enough to proceed with the tests.
+7. `tmux` is now installed on prod (by the owner) and is safe to use in runbooks; the owner can also push files into the lab if needed.
+
+Review gate: stop here. Each of T1-T6 needs the owner's separate review and approval before its session runs.

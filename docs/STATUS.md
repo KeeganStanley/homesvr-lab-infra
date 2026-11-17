@@ -1,8 +1,8 @@
 # Status
 
-**Updated:** 2026-11-08
-**Phase:** Phase 0 + Foundation: all code written and unit-tested (143 pytest pass, shellcheck clean, fresh-context review done and its Important findings fixed). Preflight has run on prod (PASS, see `lab/results/foundation.md`). Nothing else has run on a server yet.
-**Next (owner):** Task 5 deploy (push `lab/claude-ops` into CT 100, run `40-deploy.sh`), then Task 6 steps in this order: Require trusted devices, `claude auth login`, trust + bypass prompts in `/home/claude/lab`, `/config` push settings. The Task 5 live check (`claude -p`) needs that login first, so it comes after those, not before. Stop after F8 for go/no-go; T1-T6 each need separate approval.
+**Updated:** 2026-11-17
+**Phase:** Phase 0 + Foundation complete: F1-F8 recorded in `lab/results/foundation.md` (F1 and the loaded-lab baseline accepted by the owner, F7 partial). Review gate reached.
+**Next (owner):** read the go/no-go summary in `lab/results/foundation.md` and decide on its open items. Then review and approve each task test T1-T6 separately before its session runs.
 
 ## Progress
 
@@ -12,9 +12,9 @@
 | 2 Baseline + compare | done | `baseline.sh 10 before.csv` on prod (lab not yet created) | |
 | 3 VM 900 + pve-lab (F1) | done; **VM 900 + PVE 8.4 installed, F1 accepted by owner 2026-11-09** (see ruling) | upload ISO; `01-create-vm900.sh`; install PVE; `10-post-install.sh`; `qm set 900 --delete ide2`; delete ISO; `baseline.sh 10 during.csv` + `compare_baseline.py` | the one prod change |
 | 4 claude-ops CT + creds | done; **run on pve-lab 2026-11-09, all three verification checks passed** (CT 100 created from the Debian 13 template on PVE 8.4; ssh, API token and `claude --version` all work). An early run failed on a `umask 077` bug in `20-`, fixed | `20-create-claude-ops.sh` on pve-lab, then `pct exec 100 -- bash /root/30-install.sh`; verify per plan step 3. The script also gives the agent a `Host pve-lab` ssh alias and pve-lab's host key (BatchMode ssh failed without them) | |
-| 5 Audit hook + settings | done | `pct exec 100 -- bash <repo>/lab/claude-ops/40-deploy.sh`; one `claude -p` run; `tail -1` the log **as root** (the log is `root:claude 0620`: the agent can append, not read) | |
-| 6 Remote Control (F2, F3, F6) | done | **swap plan steps 2 and 3:** turn on Require trusted devices first, then `claude auth login` (or re-run it after), then trust prompts, push settings, `systemctl enable --now claude-rc`, then F2/F2b/F3/F6 from the phone | |
-| 7 F4, F5, F7, F8 + go/no-go | done | F4 (`lab/tests/f4-cred-boundary.sh <prod_ip>` in CT, then `history -c` and delete), F5 (`f5-audit-check.sh <ts> 20` on pve-lab), F7, F8 | then stop for owner review |
+| 5 Audit hook + settings | done; **deployed and live check passed 2026-11-09** (Claude Code 2.1.321 in CT 100: one `claude -p` ssh `pveversion` call wrote exactly one record, `tool: Bash`, `prod_tier: read`). `/hooks` does NOT list the managed hook, but it fires; use the log as the check | `pct exec 100 -- bash <repo>/lab/claude-ops/40-deploy.sh`; one `claude -p` run; `tail -1` the log **as root** (the log is `root:claude 0620`: the agent can append, not read) | |
+| 6 Remote Control (F2, F3, F6) | done; **service enabled, F2, F3 and F6 passed 2026-11-09, F2b passed 2026-11-10** ( `rc-loop` restart path not exercised live, see results; F6 pushes initially failed on Haiku, then worked; registration ruled out, cause not isolated, reliability not measured, see results; the `--name` flag is passed but the UI doesn't show it: cosmetic, closed) | **swap plan steps 2 and 3:** turn on Require trusted devices first, then `claude auth login` (or re-run it after), then trust prompts, push settings, `systemctl enable --now claude-rc`, then F2/F2b/F3/F6 from the phone | |
+| 7 F4, F5, F7, F8 + go/no-go | done; **done 2026-11-17: F4, F5, F8 passed; F7 partial; loaded-lab baseline accepted by owner (CPU +2.6 pp, iowait +0.2 pp, swap +256 KiB); go/no-go summary written, stopped at the review gate** | F4 (`lab/tests/f4-cred-boundary.sh <prod_ip>` in CT, then `history -c` and delete), F5 (`f5-audit-check.sh <ts> 20` on pve-lab), F7, F8 | then stop for owner review |
 
 Repo layout note: to run a script on a server, fetch the repo tarball (see `lab/README.md`); `20-` and `f5-` use sibling files, so run them from the extracted tree.
 
@@ -32,12 +32,17 @@ Repo layout note: to run a script on a server, fetch the repo tarball (see `lab/
 - **Subscription popup (owner request, 2026-11-09):** `lab/pve-lab/15-remove-nag.sh` (optional, lab only) patches `proxmoxlib.js` via `lab/tools/patch_nag.py` and installs an apt hook that re-applies it after upgrades. It refuses to run unless the host is named `pve-lab`. The dialog pattern comes from the community patch and was *not* verified against a real PVE 8.4 file (git.proxmox.com is not reachable from this session); it fails closed (exit 1, nothing changed) if the pattern isn't found. Revert: remove `/etc/apt/apt.conf.d/99-pve-nag-patch`, then `apt-get install --reinstall proxmox-widget-toolkit`.
 - **PVE version:** the lab runs PVE 8.4 (ISO `proxmox-ve_8.4-1`) to match prod, which also runs 8.4. Debian 13 container template is available (`debian-13-standard_13.6-1`); whether PVE 8.4 can start it is untested until Task 4.
 
+- **Swap tolerance (owner decision, 2026-11-17):** `compare_baseline.py` passes swap growth up to 4096 KiB instead of requiring <= 0 (override with `--swap-tolerance-kib N`). Two clean runs showed harmless +1536 KiB and +256 KiB; real memory pressure is tens of MiB or more. The plan's "<= 0" is superseded. *Cost if wrong:* edit `DEFAULT_SWAP_TOLERANCE_KIB`.
+- **Prod and tooling (owner, 2026-11-17):** prod stability is good enough to proceed with the tests; `tmux` is installed on prod and safe to use in runbooks; the owner can push files into the lab if needed. Push reliability and F7 usage are monitored by the owner through T1-T6.
+
 ## Incident, 2026-11-09 (closed for this repo)
 
 - The prod host hung and was rebooted. Afterwards some CTs failed to start and the media drive's filesystem needed `xfs_repair`. Both were host-side problems, fixed by the owner outside this repo.
 - The hang's cause is not established (the logs were lost). Nothing found implicates VM 900 (stopped for that boot) or this repo's scripts: their only prod writes are `qm create 900` and the baseline CSV (checked by grep).
 - `tmux` was installed on prod by the owner at the time. Runbooks must not assume extra packages on prod.
 - Tasks 5 and 6 are no longer on hold. VM 900 is stopped (`onboot=0`): run `qm start 900` on prod before continuing Task 5.
+
+- **T4 draft (2026-11-17):** `docs/superpowers/plans/2026-11-17-t4-tailscale-review.md` is awaiting the owner's review (decisions D1-D5). No T4 session runs until approved. Two facts in it are unverified because `tailscale.com` was not reachable from the drafting session: key expiry on tagged devices, and the unprivileged-CT `/dev/net/tun` setup.
 
 ## Open decisions
 
