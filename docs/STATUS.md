@@ -2,7 +2,7 @@
 
 **Updated:** 2026-11-17
 **Phase:** Phase 0 + Foundation complete: F1-F8 recorded in `lab/results/foundation.md` (F1 and the loaded-lab baseline accepted by the owner, F7 partial). Review gate reached.
-**Next (owner):** read the go/no-go summary in `lab/results/foundation.md` and decide on its open items. Then review and approve each task test T1-T6 separately before its session runs.
+**Next (owner):** run the approved T4 (Tailscale) session from the phone; record results. T1-T3, T5, T6 still each need separate review and approval before their sessions run.
 
 ## Progress
 
@@ -42,7 +42,7 @@ Repo layout note: to run a script on a server, fetch the repo tarball (see `lab/
 - `tmux` was installed on prod by the owner at the time. Runbooks must not assume extra packages on prod.
 - Tasks 5 and 6 are no longer on hold. VM 900 is stopped (`onboot=0`): run `qm start 900` on prod before continuing Task 5.
 
-- **T4 draft (2026-11-17):** `docs/superpowers/plans/2026-11-17-t4-tailscale-review.md`. Owner decided D1-D5 on 2026-11-17: Tailscale on the host, tag the phone, interactive login, PC untagged as the denied device, Sonnet (medium) with Haiku subagents allowed. Key expiry on tagged devices is now verified from the Tailscale docs: off by default, can be re-enabled per device in the admin console, so tags stay. The CT `/dev/net/tun` point is moot (D1-a). Owner setup done: account with MFA, phone app installed (pending device approval), device approval on, ACL reviewed. No T4 session runs until the owner approves the session itself.
+- **T4 draft (2026-11-17):** `docs/superpowers/plans/2026-11-17-t4-tailscale-review.md`. Owner decided D1-D5 on 2026-11-17: Tailscale on the host, tag the phone, interactive login, PC untagged as the denied device, Sonnet (medium) with Haiku subagents allowed. Key expiry on tagged devices is now verified from the Tailscale docs: off by default, can be re-enabled per device in the admin console, so tags stay. The CT `/dev/net/tun` point is moot (D1-a). Owner setup done: account with MFA, phone app installed (pending device approval), device approval on, ACL reviewed. **T4 session approved by the owner 2026-11-17.** Usage before: 9% session, 3% week.
 
 ## Open decisions
 
