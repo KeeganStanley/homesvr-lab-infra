@@ -38,6 +38,7 @@ Reading: nested virtualisation is on; 18.2 GiB is available (above the 12 GiB wa
 - Owner's own IO-delay monitoring shows the iowait figure during the lab (about 0%) is accurate.
 - Swap: flat inside each run (40448 KiB before, 41984 KiB during); the 1536 KiB difference arose in the 31 h between the runs, which include VM 900's creation and install. `free -m` agrees (41 MiB swap used, 8 GiB swap, 15.6 GiB available with the lab running).
 - Ruling (owner, 2026-11-09): accept F1 on this evidence, although the plan's strict "swap growth <= 0" and a valid before/after pair were not satisfied. No paired rerun was taken.
+- A clean paired run later gave the real answer for a loaded lab (see "Loaded-lab baseline" below): CPU +2.6 pp, iowait +0.2 pp, swap +256 KiB.
 - `vmstat` on the prod host reports an identical `free` value on every row. That is `vmstat` itself, not `baseline.sh`; use `free -m` or `/proc/meminfo` for memory checks.
 
 ## F2 notes
@@ -82,4 +83,43 @@ Reading: nested virtualisation is on; 18.2 GiB is available (above the 12 GiB wa
 | Task | Usage before % | Usage after % | Notes |
 |---|---|---|---|
 | F2–F6 | not captured | 6% session / 11% week (2026-11-10 22:52, Pro) | Before-figure was never taken. The after figure includes the build session, chats and Cowork: weekly split Claude Code 60% / Cowork 29% / Chats 11% (shares of the 11%). The lab's own share cannot be separated. |
+| Loaded-lab prompt (2 CTs, stress-ng, Sonnet 5.5 medium) | not stated | 2% week / 1% session (reported 2026-11-17; weekly allowance had reset since the earlier reading) | Cheap, but the figure includes whatever else ran in the same window. |
 | *Baseline for next task* | 6% session / 11% week | | Take session % and week % before and after every task session; avoid other Claude Code work in between. |
+
+## Loaded-lab baseline (Task 7, step 6)
+
+Clean pair: `before3.csv` with VM 900 stopped, `during3.csv` with the lab running and the agent loading it from the phone (two CTs created, `apt-get update`, `stress-ng --cpu 2 --io 2` for 5 min in each, then destroyed).
+
+`compare_baseline.py before3.csv during3.csv` -> `{"cpu_busy_delta_pp": 2.6, "iowait_delta_pp": 0.2, "swap_growth_kib": 256, "pass": false}`.
+
+- CPU and iowait are inside the 5 pp limits. The only failure is the plan's strict "swap growth <= 0" rule, by 256 KiB.
+- Owner observations: RAM use barely grew, Jellyfin playback never stuttered, IO delay stayed near 0.
+- Ruling (owner): accept as a pass despite the 256 KiB swap growth. *Cost if wrong:* none known; the strict rule has now failed by a few hundred KiB on two separate runs, which suggests it is too tight for this host.
+- The agent hit a network failure inside the new CTs at the apt step: my prompt created them without a NIC (`--net0` omitted). It diagnosed the cause and proposed adding a NIC to each; that worked for the rest of the run. Lab CTs created by the agent need `net0` given explicitly.
+
+## Go / no-go summary
+
+| Test | Result | Caveat |
+|---|---|---|
+| F1 idle lab vs baseline | Accepted by owner | strict swap rule not met; first `before.csv` invalid (slow prod drive); superseded by the loaded run |
+| Loaded lab vs clean baseline | Accepted by owner | CPU +2.6 pp, iowait +0.2 pp, swap +256 KiB (strict rule not met) |
+| F2 phone, mobile data | PASS | |
+| F2b > 18 h re-confirm | PASS | |
+| F3 reboot + 15 min cut | PASS | `rc-loop` restart-after-exit path not exercised on the real server |
+| F4 credential boundary | PASS | accidental positive control showed the checks do detect access |
+| F5 audit | PASS | exactly 20 lines, no slack; only the `pct destroy` tier spot-checked |
+| F6 push | PASS | first attempts failed on Haiku, cause not isolated; reliability not measured |
+| F7 usage | Partial | baseline only; Pro vs Max not decidable yet |
+| F8 kill switch | PASS | 27 s stop; lab back about 10 s after the VM's kernel booted |
+
+Recommendation: **go to the owner's review of T1-T6**, with these open items for the owner:
+
+1. The strict swap criterion keeps failing by tiny amounts. Decide whether to replace it with a tolerance or a within-run measure before the task tests rely on it.
+2. F6 pushes work but are not shown to be reliable; for "Push when Claude decides" the agent chooses whether to send one.
+3. F7 cannot yet settle Pro vs Max: record session % and week % before and after every task session. T1 and T6 are expected to be the heavy ones.
+4. The managed-settings hook is not tamper-proof: the agent has root on pve-lab and can reach CT 100 as root. The audit log is protected only in the sense that `claude` cannot delete or read it; it can still truncate it.
+5. The audit classifier is regex-based and advisory (see STATUS known issues).
+6. Prod stability is the owner's call: the host hung on 2026-11-09 (see STATUS incident note; nothing found implicates VM 900 or these scripts). VM 900 is `onboot=0`.
+7. Runbooks must not assume extra packages on prod (the incident note); the "run it in tmux" tips given during F1 and the loaded run did.
+
+Review gate: stop here. Each of T1-T6 needs the owner's separate review and approval before its session runs.

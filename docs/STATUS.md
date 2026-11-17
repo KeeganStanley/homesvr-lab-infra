@@ -1,8 +1,8 @@
 # Status
 
-**Updated:** 2026-11-08
-**Phase:** Phase 0 + Foundation: all code written and unit-tested (143 pytest pass, shellcheck clean, fresh-context review done and its Important findings fixed). Preflight has run on prod (PASS, see `lab/results/foundation.md`). Nothing else has run on a server yet.
-**Next (owner):** Task 5 deploy (push `lab/claude-ops` into CT 100, run `40-deploy.sh`), then Task 6 steps in this order: Require trusted devices, `claude auth login`, trust + bypass prompts in `/home/claude/lab`, `/config` push settings. The Task 5 live check (`claude -p`) needs that login first, so it comes after those, not before. Stop after F8 for go/no-go; T1-T6 each need separate approval.
+**Updated:** 2026-11-17
+**Phase:** Phase 0 + Foundation complete: F1-F8 recorded in `lab/results/foundation.md` (F1 and the loaded-lab baseline accepted by the owner, F7 partial). Review gate reached.
+**Next (owner):** read the go/no-go summary in `lab/results/foundation.md` and decide on its open items. Then review and approve each task test T1-T6 separately before its session runs.
 
 ## Progress
 
@@ -14,7 +14,7 @@
 | 4 claude-ops CT + creds | done; **run on pve-lab 2026-11-09, all three verification checks passed** (CT 100 created from the Debian 13 template on PVE 8.4; ssh, API token and `claude --version` all work). An early run failed on a `umask 077` bug in `20-`, fixed | `20-create-claude-ops.sh` on pve-lab, then `pct exec 100 -- bash /root/30-install.sh`; verify per plan step 3. The script also gives the agent a `Host pve-lab` ssh alias and pve-lab's host key (BatchMode ssh failed without them) | |
 | 5 Audit hook + settings | done; **deployed and live check passed 2026-11-09** (Claude Code 2.1.321 in CT 100: one `claude -p` ssh `pveversion` call wrote exactly one record, `tool: Bash`, `prod_tier: read`). `/hooks` does NOT list the managed hook, but it fires; use the log as the check | `pct exec 100 -- bash <repo>/lab/claude-ops/40-deploy.sh`; one `claude -p` run; `tail -1` the log **as root** (the log is `root:claude 0620`: the agent can append, not read) | |
 | 6 Remote Control (F2, F3, F6) | done; **service enabled, F2, F3 and F6 passed 2026-11-09, F2b passed 2026-11-10** ( `rc-loop` restart path not exercised live, see results; F6 pushes initially failed on Haiku, then worked; registration ruled out, cause not isolated, reliability not measured, see results; the `--name` flag is passed but the UI doesn't show it: cosmetic, closed) | **swap plan steps 2 and 3:** turn on Require trusted devices first, then `claude auth login` (or re-run it after), then trust prompts, push settings, `systemctl enable --now claude-rc`, then F2/F2b/F3/F6 from the phone | |
-| 7 F4, F5, F7, F8 + go/no-go | done; **F4 and F5 passed 2026-11-10, F7 partial (baseline only: 6% session / 11% week on Pro; no before-figure for F2-F6)** **F8 passed 2026-11-11** (go/no-go to do; owner to decide whether to run the loaded-lab baseline from plan Task 7 step 6) | F4 (`lab/tests/f4-cred-boundary.sh <prod_ip>` in CT, then `history -c` and delete), F5 (`f5-audit-check.sh <ts> 20` on pve-lab), F7, F8 | then stop for owner review |
+| 7 F4, F5, F7, F8 + go/no-go | done; **done 2026-11-17: F4, F5, F8 passed; F7 partial; loaded-lab baseline accepted by owner (CPU +2.6 pp, iowait +0.2 pp, swap +256 KiB); go/no-go summary written, stopped at the review gate** | F4 (`lab/tests/f4-cred-boundary.sh <prod_ip>` in CT, then `history -c` and delete), F5 (`f5-audit-check.sh <ts> 20` on pve-lab), F7, F8 | then stop for owner review |
 
 Repo layout note: to run a script on a server, fetch the repo tarball (see `lab/README.md`); `20-` and `f5-` use sibling files, so run them from the extracted tree.
 
