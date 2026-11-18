@@ -170,6 +170,31 @@ def test_deploy_installs_managed_settings_root_owned(tmp_path):
     assert oct(managed.parent.stat().st_mode & 0o777) == "0o755"
     assert "claude-code" not in chown_log.read_text()  # stays owned by root
     assert "hooks" not in json.loads((root / "home/claude/.claude/settings.json").read_text())
+    md = root / "etc/claude-code/CLAUDE.md"
+    assert md.read_text() == (Path(__file__).resolve().parents[1] / "managed-CLAUDE.md").read_text()
+    assert oct(md.stat().st_mode & 0o777) == "0o644"
+
+
+def test_install_claude_md_alone_leaves_user_settings(tmp_path):
+    import os
+    import subprocess
+    root = tmp_path / "root"
+    script = Path(__file__).resolve().parents[1] / "41-install-claude-md.sh"
+    p = subprocess.run(["bash", str(script)], check=True, capture_output=True, text=True,
+                       env=dict(os.environ, DEST_ROOT=str(root)))
+    md = root / "etc/claude-code/CLAUDE.md"
+    assert oct(md.stat().st_mode & 0o777) == "0o644"
+    assert "sha256=" in p.stdout
+    assert not (root / "home").exists()
+
+
+def test_managed_claude_md_has_no_addresses_or_secrets():
+    import re
+    text = (Path(__file__).resolve().parents[1] / "managed-CLAUDE.md").read_text()
+    assert not re.search(r"\b\d{1,3}(\.\d{1,3}){3}\b", text)
+    assert "PVEAPIToken=claude@pve!ops=<secret>" in text  # placeholder only
+    assert "audit" not in text.lower()  # owner decision E3: the agent isn't told about the audit log
+    assert "<!--" not in text
 
 
 @pytest.mark.parametrize("cmd", [

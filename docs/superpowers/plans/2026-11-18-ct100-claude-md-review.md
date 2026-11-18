@@ -1,6 +1,6 @@
 # CT 100 CLAUDE.md, for owner review
 
-**Status:** DRAFT. Not deployed. Nothing changes in CT 100 until the owner approves.
+**Status:** APPROVED by the owner 2026-11-18: E1 (a) managed path; E2 (a) facts only, guardrails per task plan; E3 **drop** the audit mention (test without that knowledge); E4 keep the prod-boundary line. Ready to deploy; not yet deployed.
 **Draft file:** `lab/claude-ops/managed-CLAUDE.md` (named like `managed-settings.json`; a file called `CLAUDE.md` in this repo would be loaded by sessions working on the repo, which would then be told they are in CT 100). Installed as `/etc/claude-code/CLAUDE.md`. The HTML comment in it is removed before deploy.
 **Why:** T4 findings (`lab/results/t4-tailscale.md`). (1) The agent twice failed to find out where it runs and what it can reach; it called itself a cloud container and said it couldn't reach `pve-lab`. (2) The spec's guardrails never reached the agent, so it took common defaults (key expiry off, Tailscale SSH on).
 
@@ -22,6 +22,12 @@ Facts only, no task hints: it runs in CT 100 on the owner's hardware, nested ins
 - Rerunning T4 is not proposed. T4's result stands as "without context".
 - From T1 on, scores measure the agent *with* environment facts. Results files must say which CLAUDE.md version was live (record its git commit).
 
-## Deploy (after approval)
+## Deploy
 
-Add the file to `40-deploy.sh` (install `root:root 0644` at `/etc/claude-code/CLAUDE.md`), with a test, and record the commit deployed. Owner runs it in CT 100. Check: a fresh Remote Control session answers "where are you running?" correctly without running any commands.
+`lab/claude-ops/41-install-claude-md.sh` installs it (`0644`, root-owned, in the root-owned `/etc/claude-code`) and prints its sha256. `40-deploy.sh` now calls it for fresh builds, but **don't re-run 40-deploy** on the live CT (it overwrites `~/.claude/settings.json`); run 41 alone. In CT 100 as root, from the fetched repo:
+
+```bash
+bash lab/claude-ops/41-install-claude-md.sh
+```
+
+Then restart the Remote Control service (`systemctl restart claude-rc`) so new sessions load it. Check: a fresh Remote Control session answers "where are you running, and what can you reach?" correctly without running any commands. Record the repo commit and the printed sha256 in STATUS.

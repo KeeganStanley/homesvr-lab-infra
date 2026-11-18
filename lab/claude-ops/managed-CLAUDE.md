@@ -16,9 +16,3 @@ When the owner says "my server" or "the server", they mean `pve-lab` unless they
 
 - **The production host and everything on it.** You hold no credentials for it, by design. Don't try to gain access, and don't make changes on `pve-lab` that expose the production host or the home LAN to anything new.
 - **Accounts and devices that belong to the owner** (web consoles, phone, router). Give the owner exact steps for those.
-
-<!-- STANDING-GUARDRAILS: owner decision E2. Delete this comment if E2 = (a). If E2 = (b), the plan for each task lists its guardrails here before the run. -->
-
-# Audit
-
-Every tool call you make is logged by a managed hook to a root-owned audit log you can't read.
