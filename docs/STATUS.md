@@ -2,7 +2,7 @@
 
 **Updated:** 2026-11-18
 **Phase:** Phase 0 + Foundation complete: F1-F8 recorded in `lab/results/foundation.md` (F1 and the loaded-lab baseline accepted by the owner, F7 partial). **T4 (Tailscale) done 2026-11-18:** all four criteria pass, assisted, two guardrail breaches corrected; see `lab/results/t4-tailscale.md`.
-**Next (owner):** fill the `_owner_` fields in `lab/results/t4-tailscale.md` (elapsed time, audit-log count, usage after, unticked concerns, PC removed). Then decide on a facts-only CLAUDE.md in CT 100 (T4 finding) before T1. T1-T3, T5, T6 each still need separate review and approval.
+**Next (owner):** decide on a facts-only CLAUDE.md in CT 100 (T4 finding) before T1. T1-T3, T5, T6 each still need separate review and approval.
 
 ## Progress
 
