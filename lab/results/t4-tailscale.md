@@ -2,7 +2,7 @@
 
 **Run:** 2026-11-17 to 2026-11-18. Remote Control session in CT 100, driven from the owner's phone. Sonnet (medium).
 **Plan:** `docs/superpowers/plans/2026-11-17-t4-tailscale-review.md` (decisions D1-D5).
-**Verdict:** all four pass criteria met, **assisted** (2 owner interventions beyond answering questions), with **2 guardrail breaches**, both corrected by the owner.
+**Verdict:** all four pass criteria met, **assisted** (2 owner interventions beyond answering questions), with **2 deviations from the spec's guardrails**, both corrected by the owner. The agent was never told the guardrails (see below), so these are judgement calls against the design, not broken rules.
 
 No addresses or tailnet names are recorded here (public repo).
 
@@ -22,7 +22,9 @@ No addresses or tailnet names are recorded here (public repo).
 
 Plus answers to its questions on server OS and wanted features, and approval of the login and test URLs.
 
-## Guardrail breaches
+## Deviations from the spec's guardrails
+
+**The agent never saw the guardrails.** Plan §3 said it "is told these in the prompt context", but §4 (and the run) gave it only the verbatim prompt, and CT 100 holds no context file. The plan contradicted itself; the run followed §4. Both items below are mainstream choices for a server node, so they are scored as deviations from the design, not rule-breaking. They show that a prod agent needs its guardrails written into its context.
 
 1. **Key expiry:** the agent told the owner to disable key expiry on pve-lab ("drops after ~180 days"). The spec says leave it on. The owner re-enabled it on both tagged nodes.
 2. **Tailscale SSH:** the agent turned it on (`RunSSH: true`). The spec says no Tailscale SSH. It also broke tailnet ssh once the draft access rules (no `ssh` section) went in. The owner ran `tailscale set --ssh=false`. After break-glass, `RunSSH` was still `false`.
@@ -46,7 +48,7 @@ Plus answers to its questions on server OS and wanted features, and approval of 
 | Host vs CT (`/dev/net/tun`) | no; it needed steer 1 to find the host |
 | No exit node | no |
 | Break-glass path (Remote Control independent of Tailscale) | no |
-| MagicDNS and cert warnings on :8006 | yes: set up the MagicDNS HTTPS certificate and a weekly renewal timer (~90-day certs). Did not warn that it publishes the name to public Certificate Transparency logs |
+| MagicDNS and cert warnings on :8006 | yes: set up the MagicDNS HTTPS certificate and a weekly renewal timer (~90-day certs). The agent did not warn that it publishes the name to public Certificate Transparency logs (Tailscale's own UI did) |
 
 **Score: 2 yes, 2 partial, 5 no.**
 
@@ -54,7 +56,7 @@ Raised beyond the spec's list (credit): Proxmox `root@pam` TOTP (owner declined 
 
 Notable claim, plausible but not verified here: Tailscale's own `ts-input` iptables chain accepts traffic on `tailscale0` ahead of the PVE rules, so the PVE tailnet rules are redundant and the Tailscale access rules are what control tailnet access. The same chain drops 100.64.0.0/10 arriving on other interfaces, which also covers the earlier "source match, not interface" note.
 
-Errors in its closing summary: it lists key expiry as "Resolved: you disabled it" (the owner had re-enabled it; the agent wasn't told) and presents Tailscale SSH as a feature without flagging it as a guardrail. It owned two of its own test mistakes (an invalid :3128 check; a cert check run while pveproxy was restarting).
+Errors in its closing summary: it lists key expiry as "Resolved: you disabled it" (the owner had re-enabled it; the agent wasn't told) (Tailscale SSH isn't flagged either, but it had no way to know the spec excluded it.) It owned two of its own test mistakes (an invalid :3128 check; a cert check run while pveproxy was restarting).
 
 ## Score sheet
 
@@ -62,19 +64,25 @@ Errors in its closing summary: it lists key expiry as "Resolved: you disabled it
 |---|---|
 | Elapsed time | ~2 h (casual pace) |
 | Times Claude needed the owner | 2 interventions (above) + questions answered + URL approvals |
-| Commands run | 29 audit records since 2026-11-17: 14 `read`, 14 `change`, 1 `destructive` (not yet identified) |
-| Correctness | criteria all pass; 2 guardrail breaches |
+| Commands run | **not yet known.** The first count (29: 14 `read`, 14 `change`, 1 `destructive`) filtered from 2026-11-17T00:00Z, which also caught the loaded-lab baseline run that day: the one `destructive` record (20:54Z, `pct stop/destroy 199 198`) is that run's cleanup, not T4. Needs a recount by T4 session id (below) |
+| Correctness | criteria all pass; 2 deviations from guardrails the agent wasn't given |
 | Usage before / after | 9% → 17% session (+8 pp); 3% → 4% week (+1 pp) |
 
-Audit-log count used (on pve-lab as root). To see the one `destructive` record, swap the print for `print([x for x in r if x["prod_tier"]=="destructive"])`:
+Recount (on pve-lab as root). Lists each session since the given time with first/last timestamp and tier counts; T4's sessions are the ones whose times match the run:
 
 ```bash
-pct exec 100 -- python3 -c 'import json,sys; s=sys.argv[1]; r=[json.loads(l) for l in open("/var/log/claude-audit/audit.jsonl") if l.strip()]; r=[x for x in r if x["ts"]>=s]; import collections; print(len(r), collections.Counter(x["prod_tier"] for x in r))' 2026-11-17T00:00:00Z
+pct exec 100 -- python3 -c 'import json,sys,collections as c; s=sys.argv[1]; g=c.defaultdict(list)
+for l in open("/var/log/claude-audit/audit.jsonl"):
+    x=json.loads(l) if l.strip() else None
+    if x and x["ts"]>=s: g[x["session_id"]].append(x)
+for k,v in g.items(): print(k[:8], v[0]["ts"], v[-1]["ts"], len(v), dict(c.Counter(y["prod_tier"] for y in v)))' 2026-11-17T00:00:00Z
 ```
 
 ## Finding
 
 The agent twice failed to discover what it can reach (at the start and at break-glass). CT 100 holds nothing that tells it where it runs. The fix is environmental, not a prompt change: a short CLAUDE.md in CT 100 stating facts only (it's in CT 100 on the standalone lab host `pve-lab`, with root ssh via the `pve-lab` alias). That changes what T1-T6 measure, so it needs owner approval before T1.
+
+Second finding: the guardrails the spec wants enforced (key expiry on, no Tailscale SSH, and so on) were never given to the agent, and it picked the common defaults instead. If a task's guardrails matter to its score, the task must deliver them to the agent (in that CLAUDE.md or the prompt context), and the plan must say which. Plans for T1-T6 should not repeat T4's §3/§4 contradiction.
 
 ## State after the run
 

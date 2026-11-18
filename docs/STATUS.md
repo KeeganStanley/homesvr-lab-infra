@@ -1,8 +1,8 @@
 # Status
 
 **Updated:** 2026-11-18
-**Phase:** Phase 0 + Foundation complete: F1-F8 recorded in `lab/results/foundation.md` (F1 and the loaded-lab baseline accepted by the owner, F7 partial). **T4 (Tailscale) done 2026-11-18:** all four criteria pass, assisted, two guardrail breaches corrected; see `lab/results/t4-tailscale.md`.
-**Next (owner):** decide on a facts-only CLAUDE.md in CT 100 (T4 finding) before T1. T1-T3, T5, T6 each still need separate review and approval.
+**Phase:** Phase 0 + Foundation complete: F1-F8 recorded in `lab/results/foundation.md` (F1 and the loaded-lab baseline accepted by the owner, F7 partial). **T4 (Tailscale) done 2026-11-18:** all four criteria pass, assisted; two deviations from guardrails the agent was never given (plan §3 said it would be told them, §4 gave only the prompt), both corrected; see `lab/results/t4-tailscale.md`. T4 command count still to recount by session id (first count included the loaded-lab run).
+**Next (owner):** run the T4 audit recount (command in the results file). Decide on a CLAUDE.md in CT 100 (T4 findings: where it runs, and whether guardrails go in it) before T1. T1-T3, T5, T6 each still need separate review and approval.
 
 ## Progress
 
