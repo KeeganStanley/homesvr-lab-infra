@@ -2,7 +2,7 @@
 
 **Updated:** 2026-11-18
 **Phase:** Phase 0 + Foundation complete: F1-F8 recorded in `lab/results/foundation.md` (F1 and the loaded-lab baseline accepted by the owner, F7 partial). **T4 (Tailscale) done 2026-11-18:** all four criteria pass, assisted; two deviations from guardrails the agent was never given (plan §3 said it would be told them, §4 gave only the prompt), both corrected; see `lab/results/t4-tailscale.md`. T4 ran 21 commands (13 read, 8 change, 0 destructive) across two sessions.
-**Next (owner):** decide on a CLAUDE.md in CT 100 (T4 findings: where it runs, and whether guardrails go in it) before T1. T1-T3, T5, T6 each still need separate review and approval.
+**Next (owner):** review the CT 100 CLAUDE.md draft (`docs/superpowers/plans/2026-11-18-ct100-claude-md-review.md`, decisions E1-E4) before T1. Not deployed. T1-T3, T5, T6 each still need separate review and approval.
 
 ## Progress
 
