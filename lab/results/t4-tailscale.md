@@ -64,7 +64,7 @@ Errors in its closing summary: it lists key expiry as "Resolved: you disabled it
 |---|---|
 | Elapsed time | ~2 h (casual pace) |
 | Times Claude needed the owner | 2 interventions (above) + questions answered + URL approvals |
-| Commands run | **not yet known.** The first count (29: 14 `read`, 14 `change`, 1 `destructive`) filtered from 2026-11-17T00:00Z, which also caught the loaded-lab baseline run that day: the one `destructive` record (20:54Z, `pct stop/destroy 199 198`) is that run's cleanup, not T4. Needs a recount by T4 session id (below) |
+| Commands run | **21: 13 `read`, 8 `change`, 0 `destructive`.** Main run (session `8ed15462`, 22:41-23:08Z on 2026-11-17): 15 (9 read, 6 change). Break-glass (session `7c12a8bd`, 23:59Z-00:09Z): 6 (4 read, 2 change). Excluded: session `e394b6ed` (20:44-20:54Z, 8 records incl. the `pct stop/destroy 199 198` destructive one) is the loaded-lab baseline run, not T4. A first count from midnight wrongly included it |
 | Correctness | criteria all pass; 2 deviations from guardrails the agent wasn't given |
 | Usage before / after | 9% → 17% session (+8 pp); 3% → 4% week (+1 pp) |
 
