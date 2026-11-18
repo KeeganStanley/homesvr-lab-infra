@@ -1,7 +1,7 @@
 # Status
 
 **Updated:** 2026-11-18
-**Phase:** Phase 0 + Foundation complete: F1-F8 recorded in `lab/results/foundation.md` (F1 and the loaded-lab baseline accepted by the owner, F7 partial). **T4 (Tailscale) done 2026-11-18:** all four criteria pass, assisted; two deviations from guardrails the agent was never given (plan §3 said it would be told them, §4 gave only the prompt), both corrected; see `lab/results/t4-tailscale.md`. T4 ran 21 commands (13 read, 8 change, 0 destructive) across two sessions.
+**Phase:** Phase 0 + Foundation complete: F1-F8 recorded in `lab/results/foundation.md` (F1 and the loaded-lab baseline accepted by the owner, F7 partial). **T4 (Tailscale) done 2026-11-18:** all four criteria pass, assisted; two deviations from guardrails the agent was never given (plan §3 said it would be told them, §4 gave only the prompt), both corrected; see `lab/results/t4-tailscale.md`. T4 ran 21 commands (13 read, 8 change, 0 destructive) across two sessions. Lessons for a future prod Tailscale rollout are in the results file; the prod scope itself is to be written after T1-T6, outside this repo (owner, 2026-11-18).
 **Next (owner):** deploy the CT 100 managed CLAUDE.md (approved 2026-11-18; steps in `docs/superpowers/plans/2026-11-18-ct100-claude-md-review.md`), check it, record commit + sha256. Then T1-T3, T5, T6 each need separate review and approval; each plan must state the guardrails it gives the agent. T1-T3, T5, T6 each still need separate review and approval.
 
 ## Progress

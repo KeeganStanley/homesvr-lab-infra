@@ -84,6 +84,21 @@ The agent twice failed to discover what it can reach (at the start and at break-
 
 Second finding: the guardrails the spec wants enforced (key expiry on, no Tailscale SSH, and so on) were never given to the agent, and it picked the common defaults instead. If a task's guardrails matter to its score, the task must deliver them to the agent (in that CLAUDE.md or the prompt context), and the plan must say which. Plans for T1-T6 should not repeat T4's §3/§4 contradiction.
 
+## Lessons for a production Tailscale rollout
+
+Input for a future prod scope, which is to be written after T1-T6 and kept outside this public repo (it will hold prod specifics, and it is a prod change under the owner-approval rule, not a lab test).
+
+1. **Access model first.** The lab gives the agent no prod credentials by design. Prod "with agentic help" means either granting prod access or having the agent advise while the owner executes. T1-T6 results should decide this.
+2. **Tell the agent its environment and target.** Both T4 failures came from not knowing what it could reach. Its context must name the target host, how it reaches it, and what is off-limits.
+3. **Decide policies beforehand and give them to the agent.** Left alone it chose common defaults. Decide: key expiry (on: re-auth every ~180 days, risk of losing remote access at a bad moment; off: a stolen node key stays valid); Tailscale SSH vs OpenSSH (one ssh path); no subnet routes; no exit node.
+4. **Access rules before devices join.** The agent wrote none; the tailnet ran on allow-all until the owner pasted the policy. With Tailscale SSH on, the policy also needs an `ssh` section, or tailnet ssh is refused even where port 22 is allowed.
+5. **Tailscale's access rules, not the PVE firewall, govern tailnet traffic** (Tailscale's `ts-input` chain accepts `tailscale0` before PVE's rules; agent's claim, unverified). Verify on prod before relying on either.
+6. **Firewall changes are the main prod risk.** A Datacenter-level firewall with input DROP on prod covers the host every guest depends on. Require the agent's T4 habits: check its own access path, set an automatic rollback, test, then cancel the rollback. Stage the change.
+7. **Break-glass path independent of Tailscale,** agreed beforehand (physical/IPMI console, LAN ssh, Remote Control).
+8. **Change inventory.** The agent left unrequested state (firewall enabled, HTTPS certificate, renewal timer). Require a list of every change with its revert step at the end.
+9. **HTTPS certificates publish the machine name** to public Certificate Transparency logs. Decide whether that's acceptable for prod's hostname.
+10. **Measure by session id.** Count audit records per `session_id`, not by date, so other runs aren't mixed in.
+
 ## State after the run
 
 Tailscale stays on pve-lab (it's the remote-access path and second kill switch for later tasks). Draft access rules, tags, and key expiry are in place; Tailscale SSH off; untagged PC removed from the tailnet. The agent also left: the PVE firewall enabled (`/etc/pve/firewall/cluster.fw`), a Tailscale HTTPS certificate for pveproxy, and a weekly renewal timer. A full revert needs those undone too, beyond plan §7.
