@@ -1,6 +1,6 @@
 # T4 (Tailscale) — setup and prompt, for owner review
 
-**Status:** APPROVED by the owner 2026-11-17. Decisions D1-D5 in §1. The T4 session may run.
+**Status:** APPROVED by the owner 2026-11-17 and RUN 2026-11-17/18. Results: `lab/results/t4-tailscale.md`. Decisions D1-D5 in §1.
 **Spec:** `docs/superpowers/specs/2026-11-07-agent-ops-lab-design.md` §3 T4. **Why first:** it gives remote lab access and a second kill switch for later tasks.
 **Nothing here touches production.** Tailscale goes on `pve-lab` only.
 
