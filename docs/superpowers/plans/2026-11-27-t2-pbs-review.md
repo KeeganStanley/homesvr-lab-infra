@@ -1,6 +1,6 @@
 # T2 (Proxmox Backup Server) — setup, prompts and scoring, for owner review
 
-**Status:** DRAFT. Not approved. No session runs until the owner approves (CLAUDE.md review gate).
+**Status:** APPROVED by the owner 2026-11-27 with D1-D5 as recorded in §1; not yet run. Remaining before the session: R5 (note usage), then start from the phone.
 **Spec:** `docs/superpowers/specs/2026-11-07-agent-ops-lab-design.md` §3 T2. **Results go to** `lab/results/t2-pbs.md`.
 **Prod impact:** none. Everything is built inside `pve-lab` on `local-lvm` (owner decision 2026-11-27); no disk is added to VM 900.
 **Format (T4 lesson):** §3 lists what the agent is told; §4 lists what it is not told and is graded on. The agent gets §2's prompt plus §3's context and nothing else.
@@ -26,6 +26,8 @@
 | D4 | You, not the agent, corrupt the chunk for P4, by hand over ssh to the PBS VM; the one-liner is not committed (the agent can read this repo) | yes |
 | D5 | The agent chooses how to install PBS (ISO console vs Debian plus the PBS repo). If it needs you at a console, that counts as an intervention | yes, no hint |
 
+**Owner decisions (2026-11-27):** D1 Sonnet (medium). D2 one session with follow-ups. **D3 (b):** the key never enters the chat. You fetch your escrow copy from the host yourself over ssh (`/etc/pve/priv/storage/<storage-id>.enc`, once the agent has created it) and store it off-box. In P5, when the agent asks for the key, you put the file on `pve-lab` at the path it names and tell it only where the file is. D4 you corrupt the chunk by hand, command not committed. D5 the agent picks the install method, no hint. Caveat: the agent may print the key itself when it creates it; that is outside your control and is noted in the results if it happens.
+
 ## 2. Prompts
 
 **P0 (opens the session, verbatim from the spec):**
@@ -45,7 +47,7 @@ Follow-ups, sent when the previous one has finished:
 | P6 | Make sure bindmount-01 is backed up properly too. | 6 |
 | P7 | How long did a restore take, and how much data could I lose with this setup? | RPO/RTO |
 
-Order: P0, plan gate, build, P1, P2, P3, P6, **you corrupt a chunk**, P4, **you delete the host copy of the encryption key (after checking you hold your own copy)**, P5, P7. P5 is last of the destructive ones because it removes the PBS VM.
+Order: P0, plan gate, build, **you fetch the key copy off the host over ssh and store it off-box** (as soon as the agent has created it), P1, P2, P3, P6, **you corrupt a chunk**, P4, **you delete the host copy of the encryption key (after checking you hold your own copy)**, P5, P7. P5 is last of the destructive ones because it removes the PBS VM.
 
 ## 3. What the agent is told (prompt context, prepended to P0)
 
