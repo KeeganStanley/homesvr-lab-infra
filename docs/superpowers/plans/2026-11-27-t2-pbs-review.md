@@ -22,7 +22,7 @@
 |---|---|---|
 | D1 | Model | Sonnet (medium), as T4; record it |
 | D2 | One session, follow-up prompts as in §2 (your usual way of working, stated 2026-11-27) | yes. Risk: a very long session. If a usage window or context runs out, split at a phase boundary and say so in the results |
-| D3 | Key escrow: where you keep the off-box copy and how it is handed back in P5 | you hold it in your password manager; the agent asks; you paste it. A key pasted into a session stays in the CT's transcript (`~/.claude/projects/`), acceptable for a lab key, not for prod |
+| D3 | Key escrow: where you keep the off-box copy and how it is handed back in P5 | (a) you keep it in your password manager and paste it into the session when the agent asks in P5; or (b) you put the file on `pve-lab` yourself over ssh, so it never enters the chat. Either way it is a lab key protecting seeded test data. With (a) it stays in the CT's transcript (`~/.claude/projects/`) and in the session history; not acceptable for prod, where the agent should never see the key. **Before P5 you delete the host copy** (`/etc/pve/priv/storage/<storage-id>.enc` on `pve-lab`), otherwise the agent can restore with the host's copy and drill 5 proves nothing about the escrow. |
 | D4 | You, not the agent, corrupt the chunk for P4, by hand over ssh to the PBS VM; the one-liner is not committed (the agent can read this repo) | yes |
 | D5 | The agent chooses how to install PBS (ISO console vs Debian plus the PBS repo). If it needs you at a console, that counts as an intervention | yes, no hint |
 
@@ -45,7 +45,7 @@ Follow-ups, sent when the previous one has finished:
 | P6 | Make sure bindmount-01 is backed up properly too. | 6 |
 | P7 | How long did a restore take, and how much data could I lose with this setup? | RPO/RTO |
 
-Order: P0, plan gate, build, P1, P2, P3, P6, **you corrupt a chunk**, P4, P5, P7. P5 is last of the destructive ones because it removes the PBS VM.
+Order: P0, plan gate, build, P1, P2, P3, P6, **you corrupt a chunk**, P4, **you delete the host copy of the encryption key (after checking you hold your own copy)**, P5, P7. P5 is last of the destructive ones because it removes the PBS VM.
 
 ## 3. What the agent is told (prompt context, prepended to P0)
 
@@ -65,7 +65,7 @@ Plans before building · PBS as a **VM** · datastore on its own virtual disk ·
 | 2 | one file recovered without a full restore | file's hash is in the manifest; no CT was restored (PVE task log) |
 | 3 | restore to a new ID next to the original | both CTs exist; new one passes the manifest |
 | 4 | the verify job flags the corrupt chunk | PBS verify task output names a failed chunk/snapshot; the agent says so unprompted |
-| 5 | PBS rebuilt, datastore re-attached, restore with the escrowed key | marker-01 restored and passes the manifest; the key came from your escrow copy, not a copy left on the host |
+| 5 | PBS rebuilt, datastore re-attached, restore with the escrowed key | marker-01 restored and passes the manifest; the key came from your escrow copy (the host copy was deleted before P5); also grep the agent's home and `/root` on `pve-lab` for a stray key copy, which would weaken the result |
 | 6 | bind-mount CT is covered correctly (excluded or mode-switched) and the agent explains why | the backup contents and its stated reasoning; I have not verified current PVE behaviour for bind mounts and snapshot mode |
 
 Record RPO, RTO and the time to restore (from audit-log and PVE task timestamps, plus the agent's P7 answer).
