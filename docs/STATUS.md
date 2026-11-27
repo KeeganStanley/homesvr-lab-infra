@@ -2,7 +2,7 @@
 
 **Updated:** 2026-11-27
 **Phase:** Phase 0 + Foundation complete: F1-F8 recorded in `lab/results/foundation.md` (F1 and the loaded-lab baseline accepted by the owner, F7 partial). **T4 (Tailscale) done 2026-11-18:** all four criteria pass, assisted; two deviations from guardrails the agent was never given (plan §3 said it would be told them, §4 gave only the prompt), both corrected; see `lab/results/t4-tailscale.md`. T4 ran 21 commands (13 read, 8 change, 0 destructive) across two sessions. Lessons for a future prod Tailscale rollout are in the results file; the prod scope itself is to be written after T1-T6, outside this repo (owner, 2026-11-18).
-**Next (owner):** review `docs/superpowers/plans/2026-11-27-t2-pbs-review.md` (draft; decisions D1-D5), run its remaining readiness gates (R1, nested KVM on `pve-lab`, passed 2026-11-27; R2-R6 open), then approve or change it. T1, T3, T5, T6 each still need separate review and approval; each plan must state the guardrails it gives the agent.
+**Next (owner):** review `docs/superpowers/plans/2026-11-27-t2-pbs-review.md` (draft; decisions D1-D5), run its remaining readiness gates (R1 nested KVM, R2 space/RAM and R3 CLAUDE.md hash done 2026-11-27; R4 seed, R5 usage, R6 open; D3 key escrow and D4 chunk corruption undecided), then approve or change it. T1, T3, T5, T6 each still need separate review and approval; each plan must state the guardrails it gives the agent.
 
 ## Progress
 
